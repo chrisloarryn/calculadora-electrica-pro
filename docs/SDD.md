@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Estado | Propuesto para implementación |
-| Versión | 0.2.0 |
+| Versión | 0.3.0 |
 | Fecha | 23 de agosto de 2026 |
 | Producto | Calculadora Eléctrica Pro |
 | Plataforma | Aplicación web mobile-first instalable como PWA |
@@ -225,6 +225,12 @@ Las imágenes nuevas se almacenarán en Artifact Registry. No se copiará la rut
 No se añadirá una API hasta que exista una capacidad que no pueda resolverse de forma local, como cuentas, sincronización, licencias, colaboración o integración entre sistemas. Si se necesita, se implementará como un servicio Cloud Run independiente en Go 1.27, actualizado a la última revisión de seguridad compatible de esa línea.
 
 La interfaz pública para la PWA será HTTP/JSON por defecto. gRPC nativo se utilizará para tráfico servicio a servicio cuando reduzca latencia o simplifique contratos. Desde navegador solo se adoptará gRPC-Web o un protocolo compatible después de validar soporte, caché offline, tamaño del cliente y operación; no se agregará un proxy únicamente por preferencia tecnológica.
+
+### ADR-009 — CI/CD por promoción de artefacto inmutable
+
+GitHub Actions orquestará CI y CD; Cloud Build construirá la imagen; Artifact Registry la almacenará por digest; Cloud Run ejecutará staging y producción. Cada commit desplegable se construirá una sola vez. Producción recibirá exactamente el digest aprobado en staging, nunca una reconstrucción ni una etiqueta mutable como `latest`.
+
+Los pull requests no tendrán acceso a credenciales GCP. La entrega a producción estará protegida por un GitHub Environment, una revisión Cloud Run sin tráfico, smoke tests y promoción explícita. El rollback moverá tráfico a una revisión anterior sin reconstruir.
 
 ## 9. Tecnologías propuestas
 
@@ -770,26 +776,34 @@ Antes del piloto se requieren entre 15 y 25 casos que cubran:
 
 ### 21.1 Pull request
 
-Cada PR deberá ejecutar:
+Cada PR ejecutará `ci.yml` sobre un runner efímero de GitHub, sin secretos ni acceso a GCP. También se ejecutará para `merge_group` cuando se habilite merge queue y para `main` como verificación posterior al merge.
 
-- Formato y lint.
-- Typecheck estricto.
-- Pruebas unitarias y de propiedades.
-- Casos dorados.
+Los checks obligatorios cubrirán:
+
+- Formato, lint y typecheck estricto.
+- Validación de esquemas y perfiles normativos.
+- Pruebas unitarias, de propiedades y todos los casos dorados.
 - Pruebas de componentes críticas.
-- Build de producción.
-- Validación del manifest y service worker.
-- Auditoría de dependencias según política del proyecto.
+- E2E mobile-first, persistencia, exportación y flujo offline.
+- Build de producción y validación del manifest y service worker.
+- Build local del contenedor y prueba de `/healthz`.
+- Revisión de dependencias y vulnerabilidades altas o críticas.
+- Escaneo para impedir credenciales y archivos generados de autenticación.
+
+Un job final y único llamado `ci-gate` agregará los resultados. La protección de `main` exigirá ese check para evitar ambigüedad cuando un job interno se omita de forma legítima.
 
 ### 21.2 Despliegue
 
 ```text
-Pull request → validaciones → build local del contenedor → revisión
-main → autenticación GCP → Cloud Build → Artifact Registry
-     → Cloud Run → smoke test HTTPS → URL publicada
+Pull request → CI sin secretos → ci-gate → revisión → merge
+main → repetir gates → Cloud Build → Artifact Registry por SHA/digest
+     → Cloud Run staging → E2E/smoke → artefacto aprobado
+release manual/tag → aprobación production → misma imagen por digest
+     → revisión production sin tráfico y con tag → smoke
+     → tráfico 100% → smoke posterior → release publicada
 ```
 
-El flujo se adaptará de `.github/workflows/deploy-movil-app-backendo-dev.yml` del repositorio `cloud-functions-scheduler`, sustituyendo el servicio y el registro de imagen. Los cambios solo se desplegarán después de aprobar las pruebas y el build.
+El flujo conserva del repositorio `cloud-functions-scheduler` la autenticación, Cloud Build, Cloud Run, filtros de rutas y concurrencia. Agrega los controles que faltan en su workflow de referencia: pruebas, imagen inmutable, staging, ambientes protegidos, smoke tests, promoción sin reconstruir y rollback.
 
 Contrato inicial de infraestructura:
 
@@ -797,7 +811,8 @@ Contrato inicial de infraestructura:
 |---|---|
 | Proyecto | `gcp-course-2024` |
 | Región | `southamerica-west1` |
-| Servicio Cloud Run web | `calculadora-electrica-pro` |
+| Servicio Cloud Run staging | `calculadora-electrica-staging` |
+| Servicio Cloud Run producción | `calculadora-electrica-pro` |
 | Repositorio Artifact Registry | `calculadora-electrica` |
 | Imagen web | `southamerica-west1-docker.pkg.dev/gcp-course-2024/calculadora-electrica/web` |
 | Acceso | Público, `--allow-unauthenticated` |
@@ -814,11 +829,123 @@ Los assets tendrán nombres con hash. `index.html`, el manifest y el service wor
 
 La cuenta de servicio entregada se utilizará únicamente por GitHub Actions para construir y desplegar. Antes del primer despliegue se validarán permisos mínimos para Cloud Build, Artifact Registry, Cloud Run y uso de la identidad del servicio. En una mejora posterior se reemplazará la clave JSON por Workload Identity Federation.
 
-### 21.3 Servicios GCP requeridos
+### 21.3 Contrato de CI/CD
+
+#### 21.3.1 Workflows previstos
+
+| Archivo | Trigger | Credenciales GCP | Resultado |
+|---|---|---:|---|
+| `ci.yml` | `pull_request`, `merge_group`, `push` a `main` | No | Checks y artefactos de prueba |
+| `deploy-staging.yml` | `push` a `main` con cambios desplegables; manual | Sí, ambiente `staging` | Imagen por digest y staging validado |
+| `release-production.yml` | Tag semántico `v*` o manual con SHA/digest validado | Sí, ambiente `production` | Promoción del mismo digest |
+| `rollback-production.yml` | Manual con revisión o digest anterior | Sí, ambiente `production` | Tráfico restaurado sin rebuild |
+
+Los workflows se crearán junto con el scaffold ejecutable. Los commits exclusivamente documentales no iniciarán Cloud Build ni modificarán Cloud Run.
+
+#### 21.3.2 Gates de CI
+
+| Job lógico | Validaciones | Falla bloqueante |
+|---|---|---:|
+| `quality` | Formato, lint, typecheck, esquemas, enlaces y Markdown | Sí |
+| `engine-tests` | Unitarias, propiedades, invariantes y casos dorados | Sí |
+| `ui-tests` | Componentes, accesibilidad y estados de error | Sí |
+| `pwa-e2e` | Mobile/desktop, IndexedDB, offline, service worker, PDF y JSON | Sí |
+| `build` | Vite production, presupuesto de bundle, manifest e integridad | Sí |
+| `container` | Docker build, usuario no root, `/healthz`, CSP y headers de caché | Sí |
+| `supply-chain` | Lockfile, dependencias, secretos, SBOM y vulnerabilidades | Sí para severidad alta/crítica sin excepción aceptada |
+| `ci-gate` | Agrega todos los resultados anteriores | Sí; único check requerido por branch protection |
+
+Las reglas eléctricas no se aprobarán por un porcentaje genérico de cobertura. Cada regla normativa tendrá al menos un caso positivo, uno de límite y uno de rechazo, y todos los casos dorados deberán pasar. Los umbrales generales de cobertura comenzarán en 85% y solo podrán aumentar o justificarse en un ADR.
+
+#### 21.3.3 Artefactos e identidad de release
+
+Cada build de `main` producirá:
+
+- Imagen `web:sha-<git-sha-completo>` en Artifact Registry.
+- Digest `sha256:...`, identidad canónica usada para desplegar.
+- `release-metadata.json` con commit, digest, versión de app, motor, perfil normativo, esquema de IndexedDB y ejecuciones de prueba.
+- SBOM del contenedor.
+- Reportes de tests y Playwright con retención limitada; nunca datos reales de usuarios.
+
+La etiqueta semántica y cualquier alias humano serán referencias convenientes, no identidad de despliegue. `latest` no se desplegará. Producción deberá verificar que el digest solicitado fue generado por este repositorio y aprobó staging.
+
+#### 21.3.4 Despliegue a staging
+
+1. Volver a ejecutar `ci-gate` sobre el SHA exacto de `main`.
+2. Autenticarse en GCP después de los tests; ningún job de prueba recibe credenciales.
+3. Construir una sola imagen mediante Cloud Build y publicarla en Artifact Registry.
+4. Resolver y guardar su digest.
+5. Desplegar el digest a `calculadora-electrica-staging` con 100% del tráfico de ese servicio.
+6. Ejecutar smoke tests de `/`, `/healthz`, manifest, service worker, assets con hash, CSP y fallback SPA.
+7. Ejecutar E2E contra la URL HTTPS real, incluido un flujo offline después de la primera carga.
+8. Publicar `release-metadata.json` solo si todas las pruebas pasan.
+
+Un fallo deja producción intacta. La imagen fallida podrá conservarse brevemente para diagnóstico, pero no se considerará promocionable.
+
+#### 21.3.5 Promoción a producción
+
+1. Resolver el SHA o digest ya aprobado en staging; no reconstruir.
+2. Esperar la protección y aprobación del GitHub Environment `production`.
+3. Registrar la revisión que actualmente recibe 100% del tráfico.
+4. Desplegar el nuevo digest a `calculadora-electrica-pro` con `--no-traffic` y un tag temporal derivado del SHA.
+5. Probar la URL exclusiva de la revisión etiquetada.
+6. Si pasa, mover 100% del tráfico a la nueva revisión.
+7. Ejecutar smoke tests sobre la URL pública y registrar revisión, digest y URL en el resumen del workflow.
+8. Eliminar el tag temporal cuando ya no sea necesario.
+
+No se hará rollout porcentual entre dos revisiones del frontend estático. Peticiones independientes podrían recibir `index.html` nuevo desde una revisión y assets con hash desde otra, causando errores. La revisión etiquetada permite probar sin tráfico y luego realizar un cambio completo.
+
+#### 21.3.6 Rollback
+
+- Ante un fallo antes de la promoción, la revisión candidata se mantiene en 0% y se retira su tag.
+- Ante un smoke test fallido después de promover, el workflow devuelve 100% del tráfico a la revisión registrada al inicio.
+- El rollback manual selecciona una revisión o digest conocido; nunca recompila código histórico.
+- Después de revertir se repiten `/healthz`, manifest, service worker y el flujo crítico de cálculo.
+- La acción genera evidencia y abre o enlaza un incidente; no elimina la revisión fallida automáticamente.
+
+Un rollback de servidor no revierte una PWA ya cacheada ni una migración local. Por ello, CI probará compatibilidad de IndexedDB entre `N-1`, `N` y el camino de recuperación. Las migraciones destructivas requerirán respaldo exportable y un plan propio antes de producción.
+
+#### 21.3.7 Seguridad del pipeline
+
+- `pull_request_target` queda prohibido para construir o ejecutar código del PR.
+- PRs y forks no reciben secrets, tokens GCP ni permisos de escritura.
+- Cada job declara permisos mínimos; CI usa normalmente `contents: read`.
+- Las Actions externas se fijan a SHA completo, con comentario de versión y actualización controlada.
+- Entradas de issues, PRs, tags o dispatch no se interpolan directamente en shell.
+- `GCP_SA_KEY` se limita a ambientes de despliegue y se reemplazará por Workload Identity Federation restringida a repositorio, rama/tag y ambiente.
+- `gha-creds-*.json` estará en `.gitignore`, `.dockerignore` y escaneos del pipeline.
+- Artefactos descargados entre jobs se validan y nunca se ejecutan si proceden de un contexto no confiable.
+- Ningún log, screenshot o reporte incluirá credenciales ni datos reales de proyectos eléctricos.
+
+#### 21.3.8 Concurrencia, timeouts y reintentos
+
+- CI de una misma rama: `cancel-in-progress: true` para descartar commits obsoletos.
+- Staging y producción: grupos de concurrencia separados y `cancel-in-progress: false`; nunca se interrumpe una promoción a mitad.
+- Solo un despliegue por ambiente puede ejecutarse a la vez.
+- Cada job y cada comando de red tendrá timeout explícito.
+- Solo operaciones idempotentes de red podrán reintentarse; tests fallidos no se ocultarán con reintentos globales.
+- Objetivo inicial: feedback PR menor a 10 minutos, staging menor a 15 y promoción técnica menor a 5, excluyendo aprobación manual.
+
+#### 21.3.9 Protección del repositorio y ambientes
+
+La comprobación del 23 de agosto de 2026 mostró que todavía no existen workflows, protección de `main` ni GitHub Environments. Se configurarán cuando `ci.yml` pueda emitir checks reales.
+
+Los tres secretos GCP están actualmente a nivel de repositorio. Antes de habilitar el primer workflow de despliegue, `GCP_SA_KEY` deberá moverse a los environments `staging` y `production`, o reemplazarse por WIF. Ningún workflow activado quedará autorizado a leer una clave GCP desde un evento de PR.
+
+Configuración objetivo:
+
+- `main` requiere pull request, `ci-gate`, conversaciones resueltas y rama actualizada.
+- Force-push y eliminación de `main` quedan deshabilitados; no habrá bypass rutinario.
+- Cambios en motor, perfiles normativos y casos dorados requieren revisión técnica mediante `CODEOWNERS` cuando se asigne el revisor.
+- `staging` acepta únicamente `main` y no exige aprobación manual.
+- `production` acepta tags/revisiones autorizadas, exige aprobación y evita autoaprobación cuando exista un segundo responsable.
+- Los nombres de jobs obligatorios serán únicos en todo el repositorio.
+
+### 21.4 Servicios GCP requeridos
 
 La selección se validó el 23 de agosto de 2026 mediante documentación oficial y consultas de solo lectura al proyecto `gcp-course-2024`. El estado describe el proyecto en esa fecha; el pipeline deberá comprobarlo nuevamente antes del primer despliegue.
 
-#### 21.3.1 Inventario mínimo
+#### 21.4.1 Inventario mínimo
 
 | Servicio | API | Fase | Estado verificado | Responsabilidad |
 |---|---|---|---|---|
@@ -835,19 +962,20 @@ La selección se validó el 23 de agosto de 2026 mediante documentación oficial
 
 La aplicación en ejecución depende directamente solo de Cloud Run y de la lectura de su imagen desde Artifact Registry. Cloud Build y Cloud Storage intervienen al publicar; Resource Manager e IAM intervienen al autorizar; Logging y Monitoring operan de forma administrada. Ninguno de estos servicios recibirá proyectos, cargas, cálculos o PDFs del usuario.
 
-#### 21.3.2 Recursos de la aplicación
+#### 21.4.2 Recursos de la aplicación
 
 La consulta del 23 de agosto de 2026 confirmó que todavía no existen estos recursos, por lo que deberán crearse como parte del primer despliegue ejecutable:
 
 | Recurso | Nombre | Estado |
 |---|---|---|
 | Repositorio Docker de Artifact Registry | `calculadora-electrica` | Pendiente de creación |
-| Servicio Cloud Run web | `calculadora-electrica-pro` | Pendiente de creación |
+| Servicio Cloud Run staging | `calculadora-electrica-staging` | Pendiente de creación |
+| Servicio Cloud Run producción | `calculadora-electrica-pro` | Pendiente de creación |
 | Cuenta de servicio runtime | `calculadora-electrica-web@gcp-course-2024.iam.gserviceaccount.com` | Pendiente de creación |
 
 No se crearán desde un commit exclusivamente documental. El bootstrap deberá ser idempotente: crear si falta, verificar ubicación y políticas si existe, y nunca reemplazar silenciosamente un recurso incompatible.
 
-#### 21.3.3 Servicios diferidos o descartados del MVP
+#### 21.4.3 Servicios diferidos o descartados del MVP
 
 | Servicio | Decisión MVP | Condición que justificaría incorporarlo |
 |---|---|---|
@@ -863,7 +991,7 @@ No se crearán desde un commit exclusivamente documental. El bootstrap deberá s
 
 No se habilitará un servicio “por si acaso”. Cada incorporación futura requerirá ADR, propietario de datos, modelo de amenazas, presupuesto y criterio de retiro.
 
-#### 21.3.4 Dominio propio y borde
+#### 21.4.4 Dominio propio y borde
 
 El piloto utilizará la URL HTTPS `*.run.app`, suficiente para instalar la PWA. La asignación directa de dominios de Cloud Run no está disponible en `southamerica-west1` y permanece en Preview en las regiones soportadas. Por ello, un dominio propio de producción agregará:
 
@@ -876,7 +1004,7 @@ El piloto utilizará la URL HTTPS `*.run.app`, suficiente para instalar la PWA. 
 
 Hasta esa decisión, no se crearán Load Balancer, NEG, certificado, zona DNS, CDN ni política de Armor.
 
-#### 21.3.5 Identidades mínimas
+#### 21.4.5 Identidades mínimas
 
 | Identidad | Capacidad prevista |
 |---|---|
@@ -887,16 +1015,16 @@ Hasta esa decisión, no se crearán Load Balancer, NEG, certificado, zona DNS, C
 
 La cuenta de GitHub no recibirá `Owner` ni `Editor`. Los permisos se limitarán por recurso cuando GCP lo permita. Si se usa una cuenta de build propia, los logs se enviarán con `CLOUD_LOGGING_ONLY`.
 
-#### 21.3.6 Controles de costo y datos
+#### 21.4.6 Controles de costo y datos
 
-- Cloud Run conservará `min-instances=0` y `max-instances=3` hasta contar con métricas reales.
+- Ambos servicios Cloud Run conservarán `min-instances=0`; staging tendrá `max-instances=1` y producción `max-instances=3` hasta contar con métricas reales.
 - Los builds remotos se ejecutarán al integrar cambios desplegables a `main`, no en cada edición documental.
 - Artifact Registry tendrá una política de limpieza para imágenes sin etiqueta y conservará revisiones suficientes para rollback.
 - Cloud Logging no recibirá payloads de cálculo y tendrá retención y exclusiones revisadas antes del piloto.
 - Se usarán primero las métricas nativas de Cloud Monitoring; no se crearán métricas personalizadas facturables sin un caso operativo.
 - Antes de producción se configurará un presupuesto y alertas de facturación en la cuenta de billing, sin convertir Cloud Billing en dependencia de la aplicación.
 
-### 21.4 Variables y secretos
+### 21.5 Variables y secretos
 
 Los nombres se derivan de la configuración del repositorio `cloud-functions-scheduler`, pero cada repositorio de GitHub mantiene sus propios secretos.
 
@@ -905,12 +1033,16 @@ Los nombres se derivan de la configuración del repositorio `cloud-functions-sch
 | `GCP_SA_KEY` | GitHub Actions Secret | Sí | JSON de cuenta de servicio; nunca se versiona |
 | `GCP_PROJECT_ID` | GitHub Actions Secret | No sensible | `gcp-course-2024` |
 | `GCP_REGION` | GitHub Actions Secret | No sensible | `southamerica-west1` |
+| `CLOUD_RUN_STAGING_SERVICE` | GitHub Actions Variable | No | `calculadora-electrica-staging` |
 | `CLOUD_RUN_SERVICE` | GitHub Actions Variable | No | `calculadora-electrica-pro` |
 | `ARTIFACT_REGISTRY_REPOSITORY` | GitHub Actions Variable | No | `calculadora-electrica` |
 | `IMAGE_NAME` | GitHub Actions Variable | No | `web` |
 | `CLOUD_RUN_MEMORY` | GitHub Actions Variable | No | `512Mi` |
 | `CLOUD_RUN_CPU` | GitHub Actions Variable | No | `1` |
 | `CLOUD_RUN_TIMEOUT` | GitHub Actions Variable | No | `300s` |
+| `CLOUD_RUN_MIN_INSTANCES` | GitHub Actions Variable | No | `0` |
+| `CLOUD_RUN_STAGING_MAX_INSTANCES` | GitHub Actions Variable | No | `1` |
+| `CLOUD_RUN_MAX_INSTANCES` | GitHub Actions Variable | No | `3` |
 | `PORT` | Runtime Cloud Run | No | Inyectada por la plataforma; no se configura en GitHub |
 | `VITE_APP_VERSION` | Build público | No | Tag o SHA del build |
 | `VITE_ENGINE_VERSION` | Build público | No | Versión publicada del motor |
@@ -920,16 +1052,16 @@ Los nombres se derivan de la configuración del repositorio `cloud-functions-sch
 
 El detalle operativo está en [Despliegue en GCP y Cloud Run](GCP_CLOUD_RUN.md).
 
-### 21.5 Entornos
+### 21.6 Entornos
 
 | Entorno | Uso |
 |---|---|
 | Local | Desarrollo y pruebas unitarias |
-| Preview | Revisión de cada PR |
-| Staging | Piloto y validación profesional |
-| Producción | Usuarios finales |
+| Preview | Servidor efímero en GitHub Actions; no crea Cloud Run por PR |
+| Staging | Servicio `calculadora-electrica-staging`; despliegue automático de `main` |
+| Producción | Servicio `calculadora-electrica-pro`; digest aprobado y ambiente protegido |
 
-### 21.6 API futura y gRPC
+### 21.7 API futura y gRPC
 
 Una API futura tendrá estas reglas:
 
@@ -992,13 +1124,25 @@ Los cálculos y valores eléctricos nunca se incluirán automáticamente en tele
 - Las migraciones de fixtures históricos son correctas.
 - Un error de almacenamiento ofrece una salida recuperable.
 
+### 23.5 CI/CD
+
+- `main` no acepta un PR con `ci-gate` fallido.
+- Ningún PR o fork recibe credenciales GCP.
+- Todo digest de producción pasó antes por staging con el mismo SHA y metadata.
+- La revisión candidata se prueba por su URL etiquetada antes de recibir tráfico.
+- Un fallo posterior a la promoción restaura la revisión anterior sin rebuild.
+- Los cambios exclusivamente documentales no activan Cloud Build ni Cloud Run.
+- El procedimiento de rollback se ensaya antes del piloto.
+- Los workflows no filtran secrets ni datos eléctricos en logs o artefactos.
+- Una release registra commit, digest, versiones de motor/perfil/esquema y evidencia de tests.
+
 ## 24. Plan de implementación derivado
 
 ### Hito 0 — Fundaciones y validación
 
 - Confirmar alcance Chile.
 - Nombrar revisor técnico.
-- Escribir ADR-001 a ADR-006.
+- Escribir ADR-001 a ADR-009.
 - Crear fixtures y primeros casos dorados.
 - Decidir catálogo métrico/AWG inicial.
 
@@ -1008,7 +1152,9 @@ Los cálculos y valores eléctricos nunca se incluirán automáticamente en tele
 - Manifest, iconos y service worker.
 - Router, layout mobile-first y tokens.
 - IndexedDB y migración inicial.
-- CI con build, typecheck y pruebas.
+- `ci.yml` con `ci-gate`, build, typecheck, pruebas y escaneos.
+- Contenedor, Artifact Registry y servicio `calculadora-electrica-staging`.
+- `deploy-staging.yml` con imagen inmutable y E2E HTTPS.
 
 ### Hito 2 — Dominio y motor
 
@@ -1040,6 +1186,8 @@ Los cálculos y valores eléctricos nunca se incluirán automáticamente en tele
 - Corrección de casos dorados.
 - Pruebas en dispositivos objetivo.
 - Staging y canal de feedback.
+- Ambiente GitHub `production`, protección de `main` y revisión técnica.
+- Promoción por digest, smoke tests y rollback ensayado.
 - Decisión de salida a producción.
 
 ## 25. Preguntas abiertas

@@ -13,8 +13,12 @@ flowchart LR
     DEV[Push a main] --> GHA[GitHub Actions]
     GHA --> CB[Cloud Build]
     CB --> AR[Artifact Registry]
-    AR --> CR[Cloud Run<br/>calculadora-electrica-pro]
-    CR --> PWA[Navegador / PWA]
+    AR --> STG[Cloud Run staging]
+    STG --> TEST[E2E + smoke]
+    TEST --> APPROVAL[Aprobación]
+    APPROVAL --> PROD[Cloud Run producción]
+    AR --> PROD
+    PROD --> PWA[Navegador / PWA]
     PWA --> IDB[(IndexedDB local)]
 ```
 
@@ -26,7 +30,8 @@ Cloud Run entrega archivos estáticos. Los proyectos, cálculos e informes perma
 |---|---|
 | Proyecto GCP | `gcp-course-2024` |
 | Región | `southamerica-west1` |
-| Servicio Cloud Run | `calculadora-electrica-pro` |
+| Servicio Cloud Run staging | `calculadora-electrica-staging` |
+| Servicio Cloud Run producción | `calculadora-electrica-pro` |
 | Repositorio Artifact Registry | `calculadora-electrica` |
 | Imagen | `southamerica-west1-docker.pkg.dev/gcp-course-2024/calculadora-electrica/web` |
 | Acceso | Público |
@@ -35,7 +40,7 @@ Cloud Run entrega archivos estáticos. Los proyectos, cálculos e informes perma
 | CPU | `1` |
 | Timeout | `300s` |
 | Mínimo de instancias | `0` |
-| Máximo de instancias | `3` |
+| Máximo de instancias | Staging `1`; producción `3` |
 
 Container Registry dejó de aceptar escrituras el 18 de marzo de 2025. Aunque el repositorio de referencia usa `gcr.io`, este servicio nuevo utilizará Artifact Registry con dominio `pkg.dev`.
 
@@ -54,9 +59,9 @@ Una consulta de solo lectura realizada el 23 de agosto de 2026 confirmó que est
 
 `serviceusage.googleapis.com` está deshabilitada y no bloquea el pipeline porque las APIs requeridas ya están activas. Solo se habilitará si el bootstrap se automatiza.
 
-Cloud Storage será una dependencia administrada para el staging de Cloud Build; no se creará un bucket de la aplicación ni se guardarán allí proyectos eléctricos. Secret Manager, una base de datos, autenticación, mensajería, tareas, VPC y API Gateway quedan fuera del MVP. La justificación y los disparadores futuros están en la sección 21.3 del [SDD](SDD.md).
+Cloud Storage será una dependencia administrada para el staging de Cloud Build; no se creará un bucket de la aplicación ni se guardarán allí proyectos eléctricos. Secret Manager, una base de datos, autenticación, mensajería, tareas, VPC y API Gateway quedan fuera del MVP. La justificación y los disparadores futuros están en la sección 21.4 del [SDD](SDD.md).
 
-Los recursos `calculadora-electrica` de Artifact Registry, `calculadora-electrica-pro` de Cloud Run y `calculadora-electrica-web@gcp-course-2024.iam.gserviceaccount.com` todavía no existen. Se crearán de forma idempotente junto con el primer contenedor verificable, no durante la fase documental.
+Los recursos `calculadora-electrica` de Artifact Registry, `calculadora-electrica-staging` y `calculadora-electrica-pro` de Cloud Run, y `calculadora-electrica-web@gcp-course-2024.iam.gserviceaccount.com` todavía no existen. Se crearán de forma idempotente junto con el primer contenedor verificable, no durante la fase documental.
 
 ## Variables y secretos
 
@@ -74,12 +79,16 @@ GitHub no permite volver a leer el valor de un secret. El archivo JSON fuente pe
 
 | Nombre | Valor |
 |---|---|
+| `CLOUD_RUN_STAGING_SERVICE` | `calculadora-electrica-staging` |
 | `CLOUD_RUN_SERVICE` | `calculadora-electrica-pro` |
 | `ARTIFACT_REGISTRY_REPOSITORY` | `calculadora-electrica` |
 | `IMAGE_NAME` | `web` |
 | `CLOUD_RUN_MEMORY` | `512Mi` |
 | `CLOUD_RUN_CPU` | `1` |
 | `CLOUD_RUN_TIMEOUT` | `300s` |
+| `CLOUD_RUN_MIN_INSTANCES` | `0` |
+| `CLOUD_RUN_STAGING_MAX_INSTANCES` | `1` |
+| `CLOUD_RUN_MAX_INSTANCES` | `3` |
 
 ### Variables públicas del build
 
@@ -125,15 +134,14 @@ El piloto usará la URL HTTPS `run.app`. `southamerica-west1` no admite la asign
 
 ## Workflow previsto
 
-El workflow se agregará junto con el scaffold ejecutable para que nunca exista un pipeline verde sin una aplicación verificable. En cada cambio desplegable deberá:
+Los workflows se agregarán junto con el scaffold ejecutable para que nunca exista un pipeline verde sin una aplicación verificable:
 
-1. Ejecutar lint, typecheck, pruebas, casos dorados y build PWA.
-2. Autenticarse con `GCP_SA_KEY` sin imprimir su contenido.
-3. Construir una imagen etiquetada con `$GITHUB_SHA` mediante Cloud Build.
-4. Publicarla en Artifact Registry.
-5. Desplegar por digest o por etiqueta inmutable a `calculadora-electrica-pro`.
-6. Esperar la URL de Cloud Run y ejecutar smoke tests de `/`, `/healthz`, manifest y service worker.
-7. Conservar la revisión anterior para rollback.
+1. `ci.yml` valida cada PR sin secrets: lint, typecheck, motor, casos dorados, PWA, E2E, contenedor y supply chain.
+2. `deploy-staging.yml` repite los gates en `main`, construye una sola imagen con Cloud Build y la despliega por digest a `calculadora-electrica-staging`.
+3. `release-production.yml` toma ese mismo digest, espera aprobación, crea una revisión sin tráfico, prueba su URL etiquetada y luego mueve 100% del tráfico.
+4. `rollback-production.yml` devuelve tráfico a una revisión conocida sin reconstruir.
+
+No se dividirá tráfico porcentualmente entre revisiones del frontend porque una respuesta HTML podría referenciar assets con hash ausentes en la otra revisión. Todos los detalles, gates, permisos, concurrencia y criterios están en la sección 21.3 del [SDD](SDD.md).
 
 ## API futura en Go
 
@@ -153,10 +161,14 @@ La aplicación no necesita API en el MVP. Si aparecen cuentas, sincronización, 
 - [Transición desde Container Registry](https://docs.cloud.google.com/artifact-registry/docs/transition/transition-from-gcr)
 - [Desplegar imágenes en Cloud Run](https://docs.cloud.google.com/run/docs/deploying)
 - [Desplegar en Cloud Run mediante Cloud Build](https://docs.cloud.google.com/build/docs/deploying-builds/deploy-cloud-run)
+- [Rollouts y rollback en Cloud Run](https://docs.cloud.google.com/run/docs/rollouts-rollbacks-traffic-migration)
 - [Logs de Cloud Run](https://docs.cloud.google.com/run/docs/logging)
 - [Monitoreo de Cloud Run](https://docs.cloud.google.com/run/docs/monitoring)
 - [Dominios personalizados de Cloud Run](https://docs.cloud.google.com/run/docs/mapping-custom-domains)
 - [Regiones disponibles de Cloud Run](https://cloud.google.com/run/docs/locations)
+- [GitHub Actions Environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments)
+- [Protección de ramas en GitHub](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
+- [OIDC de GitHub con GCP](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-google-cloud-platform)
 - [Usar gRPC en Cloud Run](https://docs.cloud.google.com/run/docs/triggering/grpc)
 - [HTTP/2 extremo a extremo en Cloud Run](https://docs.cloud.google.com/run/docs/configuring/http2)
 - [Notas de Go 1.27](https://go.dev/doc/go1.27)

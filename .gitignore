@@ -8,6 +8,6 @@ test-results/
 .env.*
 !.env.example
 *.local
+gha-creds-*.json
 .DS_Store
 Thumbs.db
-
