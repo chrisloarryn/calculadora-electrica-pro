@@ -825,34 +825,6 @@ input:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
-.circuits-form label,
-.circuit-card label,
-.circuits-project-selector {
-  display: grid;
-  gap: 6px;
-  color: var(--ink);
-  font-size: 0.8rem;
-  font-weight: 750;
-}
-
-.circuits-form input,
-.circuit-card input,
-.circuits-project-selector select {
-  width: 100%;
-  min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid #cfd9e6;
-  border-radius: 12px;
-  color: var(--ink);
-  background: #fbfcfe;
-}
-
-.circuits-form input:disabled {
-  cursor: not-allowed;
-  color: var(--ink-soft);
-  background: #f0f3f7;
-}
-
 .circuits-list {
   display: grid;
   gap: 12px;
@@ -1041,15 +1013,6 @@ input:focus-visible {
     auto;
 }
 
-.load-row input {
-  width: 100%;
-  min-height: 42px;
-  padding: 0 10px;
-  border: 1px solid #cfd9e6;
-  border-radius: 10px;
-  background: #fbfcfe;
-}
-
 .load-row span {
   color: var(--ink-soft);
   font-size: 0.82rem;
@@ -1178,13 +1141,6 @@ input:focus-visible {
   box-shadow: var(--shadow);
 }
 
-.settings-card input {
-  width: 20px;
-  height: 20px;
-  margin-top: 2px;
-  accent-color: var(--blue);
-}
-
 .settings-card strong {
   display: block;
   color: var(--ink);
@@ -1206,24 +1162,6 @@ input:focus-visible {
 
 .settings-card--form > span {
   grid-column: 1 / -1;
-}
-
-.settings-card--form label {
-  display: grid;
-  gap: 5px;
-  color: var(--ink);
-  font-size: 0.78rem;
-  font-weight: 750;
-}
-
-.settings-card--form input,
-.settings-card--form select {
-  min-height: 42px;
-  padding: 0 10px;
-  border: 1px solid #cfd9e6;
-  border-radius: 10px;
-  color: var(--ink);
-  background: #fbfcfe;
 }
 
 .settings-actions {
@@ -1274,32 +1212,6 @@ input:focus-visible {
   display: grid;
   gap: 8px;
   margin-top: 24px;
-}
-
-.project-form label {
-  margin-top: 9px;
-  color: var(--ink);
-  font-size: 0.8rem;
-  font-weight: 750;
-}
-
-.project-form label span {
-  color: var(--ink-soft);
-  font-weight: 500;
-}
-
-.project-form input {
-  width: 100%;
-  min-height: 49px;
-  padding: 0 14px;
-  border: 1px solid #cfd9e6;
-  border-radius: 13px;
-  color: var(--ink);
-  background: #fbfcfe;
-}
-
-.project-form input::placeholder {
-  color: #8d99aa;
 }
 
 .form-help {

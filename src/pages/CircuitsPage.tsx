@@ -539,6 +539,7 @@ export function CircuitsPage() {
               className="calculation-result"
               elevation={1}
               aria-live="polite"
+              sx={{ backgroundColor: '#fffaf1' }}
             >
               <div className="circuits-panel__header">
                 <h2>Resultados preliminares</h2>

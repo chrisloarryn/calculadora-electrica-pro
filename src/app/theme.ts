@@ -58,6 +58,43 @@ export const theme = createTheme({
         }),
       },
     },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundColor: '#fbfcfe',
+          borderRadius: theme.shape.borderRadius,
+        }),
+        notchedOutline: {
+          borderColor: '#cfd9e6',
+        },
+        input: {
+          minHeight: 20,
+          paddingBottom: 12,
+          paddingTop: 12,
+        },
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: {
+          fontWeight: 700,
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        icon: {
+          color: '#61708a',
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          boxShadow: '0 18px 45px rgba(31, 55, 87, 0.09)',
+        },
+      },
+    },
     MuiAppBar: {
       defaultProps: {
         elevation: 0,
