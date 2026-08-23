@@ -1,0 +1,18 @@
+{
+  "id": "CL-SEC-RIC",
+  "version": "2026-08-23",
+  "country": "Chile",
+  "source": "Adapted sample for R3",
+  "author": "Equipo",
+  "notes": "Minimal sample profile for development and tests. Not authoritative.",
+  "calibres": [
+    { "mm2": 1.5, "i_max": 10 },
+    { "mm2": 2.5, "i_max": 20 },
+    { "mm2": 4, "i_max": 25 },
+    { "mm2": 6, "i_max": 32 }
+  ],
+  "differentials": [
+    { "sensibilidad_mA": 30, "i_n": 25 },
+    { "sensibilidad_mA": 300, "i_n": 63 }
+  ]
+}
