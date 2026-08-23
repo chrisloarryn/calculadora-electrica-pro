@@ -51,10 +51,17 @@ describe('calculatePreliminaryCircuit', () => {
     const automatic = calculatePreliminaryCircuit(circuit);
     const manual = calculatePreliminaryCircuit({ ...circuit, selectedConductorMm2: 6 });
 
+    if (
+      automatic.estimatedVoltageDropPercent === null ||
+      manual.estimatedVoltageDropPercent === null
+    ) {
+      throw new Error('La caída de tensión debería estar calculada.');
+    }
+
     expect(manual.evaluatedConductorMm2).toBe(6);
     expect(manual.suggestedConductorMm2).toBe(automatic.suggestedConductorMm2);
-    expect(manual.estimatedVoltageDropPercent!).toBeLessThan(
-      automatic.estimatedVoltageDropPercent!,
+    expect(manual.estimatedVoltageDropPercent).toBeLessThan(
+      automatic.estimatedVoltageDropPercent,
     );
     expect(manual.isVoltageDropCompliant).toBe(true);
     expect(manual.maximumVoltageDropPercent).toBe(3);
