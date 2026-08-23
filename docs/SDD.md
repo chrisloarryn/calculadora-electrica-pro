@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Estado | Propuesto para implementación |
-| Versión | 0.1.0 |
+| Versión | 0.2.0 |
 | Fecha | 23 de agosto de 2026 |
 | Producto | Calculadora Eléctrica Pro |
 | Plataforma | Aplicación web mobile-first instalable como PWA |
@@ -814,7 +814,89 @@ Los assets tendrán nombres con hash. `index.html`, el manifest y el service wor
 
 La cuenta de servicio entregada se utilizará únicamente por GitHub Actions para construir y desplegar. Antes del primer despliegue se validarán permisos mínimos para Cloud Build, Artifact Registry, Cloud Run y uso de la identidad del servicio. En una mejora posterior se reemplazará la clave JSON por Workload Identity Federation.
 
-### 21.3 Variables y secretos
+### 21.3 Servicios GCP requeridos
+
+La selección se validó el 23 de agosto de 2026 mediante documentación oficial y consultas de solo lectura al proyecto `gcp-course-2024`. El estado describe el proyecto en esa fecha; el pipeline deberá comprobarlo nuevamente antes del primer despliegue.
+
+#### 21.3.1 Inventario mínimo
+
+| Servicio | API | Fase | Estado verificado | Responsabilidad |
+|---|---|---|---|---|
+| Cloud Resource Manager | `cloudresourcemanager.googleapis.com` | Bootstrap/CI | Habilitada | Resolver proyecto y aplicar políticas de recursos |
+| Identity and Access Management | `iam.googleapis.com` | Bootstrap/CI | Habilitada | Cuentas de servicio y permisos mínimos |
+| Cloud Build | `cloudbuild.googleapis.com` | CI/CD | Habilitada | Construir el contenedor reproducible |
+| Artifact Registry | `artifactregistry.googleapis.com` | CI/CD/runtime | Habilitada | Guardar imágenes Docker versionadas |
+| Cloud Run | `run.googleapis.com` | Runtime | Habilitada | Servir la PWA por HTTPS y escalar a cero |
+| Cloud Logging | `logging.googleapis.com` | Operación | Habilitada | Logs de build, request, sistema y contenedor |
+| Cloud Monitoring | `monitoring.googleapis.com` | Operación | Habilitada | Métricas nativas, uptime check y alertas básicas |
+| Cloud Storage | `storage.googleapis.com` | Dependencia administrada de CI | Habilitada | Staging temporal de fuentes de Cloud Build; no almacena proyectos de usuario |
+
+`serviceusage.googleapis.com` está deshabilitada. No es una dependencia del sitio ni del despliegue mientras las APIs anteriores permanezcan habilitadas. Solo se activará si infraestructura como código necesita consultar o habilitar servicios automáticamente.
+
+La aplicación en ejecución depende directamente solo de Cloud Run y de la lectura de su imagen desde Artifact Registry. Cloud Build y Cloud Storage intervienen al publicar; Resource Manager e IAM intervienen al autorizar; Logging y Monitoring operan de forma administrada. Ninguno de estos servicios recibirá proyectos, cargas, cálculos o PDFs del usuario.
+
+#### 21.3.2 Recursos de la aplicación
+
+La consulta del 23 de agosto de 2026 confirmó que todavía no existen estos recursos, por lo que deberán crearse como parte del primer despliegue ejecutable:
+
+| Recurso | Nombre | Estado |
+|---|---|---|
+| Repositorio Docker de Artifact Registry | `calculadora-electrica` | Pendiente de creación |
+| Servicio Cloud Run web | `calculadora-electrica-pro` | Pendiente de creación |
+| Cuenta de servicio runtime | `calculadora-electrica-web@gcp-course-2024.iam.gserviceaccount.com` | Pendiente de creación |
+
+No se crearán desde un commit exclusivamente documental. El bootstrap deberá ser idempotente: crear si falta, verificar ubicación y políticas si existe, y nunca reemplazar silenciosamente un recurso incompatible.
+
+#### 21.3.3 Servicios diferidos o descartados del MVP
+
+| Servicio | Decisión MVP | Condición que justificaría incorporarlo |
+|---|---|---|
+| Secret Manager | No habilitar para el frontend estático | Una API o integración server-side necesita credenciales |
+| Firestore, Cloud SQL o Spanner | No usar | Sincronización multi-dispositivo o datos compartidos con modelo validado |
+| Identity Platform | No usar | Cuentas, autenticación y recuperación de acceso |
+| Cloud Storage de aplicación | No crear bucket | PDFs compartidos, adjuntos o backups explícitos en servidor |
+| Cloud Tasks, Pub/Sub, Scheduler o Cloud Run Jobs | No usar | Trabajo asíncrono, eventos o procesos programados reales |
+| API Gateway o Apigee | No usar | API pública con varios consumidores, cuotas y gobierno de contratos |
+| VPC, Direct VPC egress o Serverless VPC Access | No usar | Acceso a dependencias privadas |
+| Cloud Functions | No usar | No existe una función aislada que justifique otro runtime |
+| Memorystore | No usar | Caché server-side demostrada por medición |
+
+No se habilitará un servicio “por si acaso”. Cada incorporación futura requerirá ADR, propietario de datos, modelo de amenazas, presupuesto y criterio de retiro.
+
+#### 21.3.4 Dominio propio y borde
+
+El piloto utilizará la URL HTTPS `*.run.app`, suficiente para instalar la PWA. La asignación directa de dominios de Cloud Run no está disponible en `southamerica-west1` y permanece en Preview en las regiones soportadas. Por ello, un dominio propio de producción agregará:
+
+- Global External Application Load Balancer.
+- Serverless NEG apuntando al servicio Cloud Run.
+- Certificate Manager para TLS administrado.
+- Cloud DNS solo si la zona DNS se administra en GCP.
+- Cloud CDN como optimización opcional después de medir; no sustituye el service worker.
+- Cloud Armor solo si se necesita WAF, rate limiting o protección adicional para una API pública.
+
+Hasta esa decisión, no se crearán Load Balancer, NEG, certificado, zona DNS, CDN ni política de Armor.
+
+#### 21.3.5 Identidades mínimas
+
+| Identidad | Capacidad prevista |
+|---|---|
+| Cuenta de servicio de GitHub | Iniciar Cloud Build y desplegar revisiones; nunca ejecutar la aplicación |
+| Cuenta de ejecución de Cloud Build | Escribir la imagen, logs y, si el build despliega, administrar el servicio objetivo |
+| Cuenta runtime `calculadora-electrica-web` | Sin roles de proyecto en el MVP; sirve archivos estáticos |
+| Cloud Run service agent | Leer la imagen de Artifact Registry mediante permisos administrados o explícitos mínimos |
+
+La cuenta de GitHub no recibirá `Owner` ni `Editor`. Los permisos se limitarán por recurso cuando GCP lo permita. Si se usa una cuenta de build propia, los logs se enviarán con `CLOUD_LOGGING_ONLY`.
+
+#### 21.3.6 Controles de costo y datos
+
+- Cloud Run conservará `min-instances=0` y `max-instances=3` hasta contar con métricas reales.
+- Los builds remotos se ejecutarán al integrar cambios desplegables a `main`, no en cada edición documental.
+- Artifact Registry tendrá una política de limpieza para imágenes sin etiqueta y conservará revisiones suficientes para rollback.
+- Cloud Logging no recibirá payloads de cálculo y tendrá retención y exclusiones revisadas antes del piloto.
+- Se usarán primero las métricas nativas de Cloud Monitoring; no se crearán métricas personalizadas facturables sin un caso operativo.
+- Antes de producción se configurará un presupuesto y alertas de facturación en la cuenta de billing, sin convertir Cloud Billing en dependencia de la aplicación.
+
+### 21.4 Variables y secretos
 
 Los nombres se derivan de la configuración del repositorio `cloud-functions-scheduler`, pero cada repositorio de GitHub mantiene sus propios secretos.
 
@@ -838,7 +920,7 @@ Los nombres se derivan de la configuración del repositorio `cloud-functions-sch
 
 El detalle operativo está en [Despliegue en GCP y Cloud Run](GCP_CLOUD_RUN.md).
 
-### 21.4 Entornos
+### 21.5 Entornos
 
 | Entorno | Uso |
 |---|---|
@@ -847,7 +929,7 @@ El detalle operativo está en [Despliegue en GCP y Cloud Run](GCP_CLOUD_RUN.md).
 | Staging | Piloto y validación profesional |
 | Producción | Usuarios finales |
 
-### 21.5 API futura y gRPC
+### 21.6 API futura y gRPC
 
 Una API futura tendrá estas reglas:
 

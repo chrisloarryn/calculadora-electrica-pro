@@ -39,6 +39,25 @@ Cloud Run entrega archivos estáticos. Los proyectos, cálculos e informes perma
 
 Container Registry dejó de aceptar escrituras el 18 de marzo de 2025. Aunque el repositorio de referencia usa `gcr.io`, este servicio nuevo utilizará Artifact Registry con dominio `pkg.dev`.
 
+## Servicios GCP validados
+
+Una consulta de solo lectura realizada el 23 de agosto de 2026 confirmó que estas APIs están habilitadas en `gcp-course-2024`:
+
+- `cloudresourcemanager.googleapis.com`
+- `iam.googleapis.com`
+- `cloudbuild.googleapis.com`
+- `artifactregistry.googleapis.com`
+- `run.googleapis.com`
+- `logging.googleapis.com`
+- `monitoring.googleapis.com`
+- `storage.googleapis.com`
+
+`serviceusage.googleapis.com` está deshabilitada y no bloquea el pipeline porque las APIs requeridas ya están activas. Solo se habilitará si el bootstrap se automatiza.
+
+Cloud Storage será una dependencia administrada para el staging de Cloud Build; no se creará un bucket de la aplicación ni se guardarán allí proyectos eléctricos. Secret Manager, una base de datos, autenticación, mensajería, tareas, VPC y API Gateway quedan fuera del MVP. La justificación y los disparadores futuros están en la sección 21.3 del [SDD](SDD.md).
+
+Los recursos `calculadora-electrica` de Artifact Registry, `calculadora-electrica-pro` de Cloud Run y `calculadora-electrica-web@gcp-course-2024.iam.gserviceaccount.com` todavía no existen. Se crearán de forma idempotente junto con el primer contenedor verificable, no durante la fase documental.
+
 ## Variables y secretos
 
 ### GitHub Actions Secrets
@@ -80,11 +99,18 @@ Toda variable `VITE_*` es pública. Nunca debe contener tokens, claves, contrase
 
 Antes del primer despliegue se deberá:
 
-1. Habilitar Cloud Build, Cloud Run y Artifact Registry en `gcp-course-2024`.
+1. Revalidar que Cloud Build, Cloud Run, Artifact Registry, Resource Manager, IAM, Logging, Monitoring y Storage continúen habilitados.
 2. Crear el repositorio Docker `calculadora-electrica` en `southamerica-west1` si no existe.
-3. Verificar que la cuenta de servicio de GitHub pueda iniciar builds, escribir en ese repositorio y desplegar el servicio.
-4. Verificar que Cloud Run pueda leer la imagen y que la identidad de ejecución no tenga permisos innecesarios.
-5. Reemplazar a futuro la clave JSON por Workload Identity Federation para eliminar credenciales de larga duración.
+3. Crear una cuenta runtime `calculadora-electrica-web` sin roles de proyecto.
+4. Verificar que la cuenta de servicio de GitHub pueda iniciar builds y desplegar el servicio, sin roles `Owner` ni `Editor`.
+5. Verificar que la cuenta de build pueda escribir la imagen y los logs.
+6. Verificar que Cloud Run pueda leer la imagen y que la identidad runtime no tenga permisos innecesarios.
+7. Configurar un uptime check y alertas básicas de errores y latencia.
+8. Reemplazar a futuro la clave JSON por Workload Identity Federation para eliminar credenciales de larga duración.
+
+## Dominio propio
+
+El piloto usará la URL HTTPS `run.app`. `southamerica-west1` no admite la asignación directa de dominios de Cloud Run, por lo que producción deberá usar un Global External Application Load Balancer con Serverless NEG y Certificate Manager cuando se defina un dominio. Cloud DNS, Cloud CDN y Cloud Armor seguirán siendo opcionales y no se crearán en el MVP.
 
 ## Contrato del contenedor web
 
@@ -126,6 +152,11 @@ La aplicación no necesita API en el MVP. Si aparecen cuentas, sincronización, 
 
 - [Transición desde Container Registry](https://docs.cloud.google.com/artifact-registry/docs/transition/transition-from-gcr)
 - [Desplegar imágenes en Cloud Run](https://docs.cloud.google.com/run/docs/deploying)
+- [Desplegar en Cloud Run mediante Cloud Build](https://docs.cloud.google.com/build/docs/deploying-builds/deploy-cloud-run)
+- [Logs de Cloud Run](https://docs.cloud.google.com/run/docs/logging)
+- [Monitoreo de Cloud Run](https://docs.cloud.google.com/run/docs/monitoring)
+- [Dominios personalizados de Cloud Run](https://docs.cloud.google.com/run/docs/mapping-custom-domains)
+- [Regiones disponibles de Cloud Run](https://cloud.google.com/run/docs/locations)
 - [Usar gRPC en Cloud Run](https://docs.cloud.google.com/run/docs/triggering/grpc)
 - [HTTP/2 extremo a extremo en Cloud Run](https://docs.cloud.google.com/run/docs/configuring/http2)
 - [Notas de Go 1.27](https://go.dev/doc/go1.27)
