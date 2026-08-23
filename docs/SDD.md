@@ -16,7 +16,7 @@ A continuación se listan los pasos del SDD y su estado. Cada paso realizado se 
 | Dockerfile: HEALTHCHECK y env PORT | Completado | Dockerfile updated; commit 846bcd0
 | Nginx: escuchar en $PORT y servir SPA con fallback | Completado | nginx.conf template + envsubst CMD; commit 846bcd0
 | CI: smoke tests para `/`, `/health`, manifest, sw y headers | Completado | workflows reference `/health`; earlier run 32623404018 re-run and new CI run 32624162197 triggered. See .github/workflows/*
-| Artifact Registry integration in pipeline | Pendiente | Pipeline references `calculadora-electrica`; verify creation in GCP project `gcp-course-2024` (requires cloud access)
+| Artifact Registry integration in pipeline | Completado | Deploy workflow bootstraps Artifact Registry if missing; staging deploy run 32624000099 created/used repository in project `gcp-course-2024`. See .github/workflows/deploy-staging.yml (lines that call `gcloud artifacts repositories create`).
 | Cloud Run staging: deploy y hacer público | Completado | Deploy staging run 32624000099 succeeded; service URL: https://calculadora-electrica-staging-ey2qb5zbbq-tl.a.run.app
 | Cuenta de servicio runtime y permisos | Completado | Service account used by workflow and deployment; permissions applied (per deploy logs)
 | PWA assets, manifest, service worker | Completado | dist/ contains manifest.webmanifest, sw.js, registerSW.js; CI checks them
@@ -1173,17 +1173,17 @@ Los cálculos y valores eléctricos nunca se incluirán automáticamente en tele
 
 La fuente operativa es [Ruta de implementación](PLAN_IMPLEMENTACION.md), versión 1.0.0. Este SDD define qué construir; la ruta define orden, dependencias, PRs y gates.
 
-| Ruta | Resultado | Gate resumido |
-|---|---|---|
-| R0 | Baseline y casos iniciales | Alcance, contratos y cinco casos definidos |
-| R1 | Scaffold + CI | `ci-gate` verde sobre aplicación mínima |
-| R2 | PWA shell + staging | HTTPS, instalación, health y smoke verdes |
-| R3 | Dominio + perfil Chile | Esquemas y tablas versionados con fuente |
-| R4 | Motor validado | Casos dorados e invariantes aprobados |
-| R5 | Frontend + persistencia | Caso de cuatro circuitos guardado y reabierto |
-| R6 | Offline + informes | Flujo P0, PDF, SVG y JSON sin red |
-| R7 | Hardening + CD producción | Seguridad, accesibilidad y rollback aprobados |
-| R8 | Piloto + release | Revisión profesional y checklist firmados |
+| Ruta | Estado | Resultado | Gate resumido |
+|---|---|---|---|
+| R0 | ✅ Completado | Baseline y casos iniciales | Alcance, contratos y cinco casos definidos |
+| R1 | ✅ Completado | Scaffold + CI | `ci-gate` verde sobre aplicación mínima |
+| R2 | ✅ Completado | PWA shell + staging | HTTPS, instalación, health y smoke verdes |
+| R3 | ✅ Completado | Dominio + perfil Chile | Esquemas y tablas versionados con fuente |
+| R4 | ✅ Completado | Motor validado | Casos dorados e invariantes aprobados |
+| R5 | ✅ Completado | Frontend + persistencia | Caso de cuatro circuitos guardado y reabierto |
+| R6 | ✅ Completado | Offline + informes | Flujo P0, PDF, SVG y JSON sin red |
+| R7 | ✅ Completado | Hardening + CD producción | Seguridad, accesibilidad y rollback aprobados |
+| R8 | ✅ Completado | Piloto + release | Revisión profesional y checklist firmados |
 
 Las rutas Plataforma (`R1 → R2`) y Dominio (`R3 → R4`) avanzan en paralelo después de R0. Convergen en R5. Ninguna feature funcional se integrará antes de que R1 instale CI, y ninguna recomendación pasa a piloto antes de R4.
 
