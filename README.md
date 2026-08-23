@@ -2,7 +2,7 @@
 
 Aplicación web mobile-first, instalable como PWA y funcional sin conexión, para dimensionar circuitos eléctricos, protecciones y conductores, comprobar la caída de tensión y generar documentación profesional.
 
-Estado: definición de producto y arquitectura. Todavía no debe usarse para ejecutar ni certificar instalaciones reales.
+Estado: implementación inicial del shell PWA y su plataforma de entrega. El motor normativo todavía no está habilitado y la aplicación no debe usarse para ejecutar ni certificar instalaciones reales.
 
 ## Objetivo
 
@@ -34,11 +34,36 @@ Reducir el tiempo necesario para pasar de una lista de cargas a una propuesta t�
 - [Ruta de implementación](docs/PLAN_IMPLEMENTACION.md)
 - [Especificación inicial del motor de cálculo](docs/MOTOR_DE_CALCULO.md)
 
+## Desarrollo local
+
+Requiere Node 24 y pnpm 11.
+
+```bash
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+Validación completa del código:
+
+```bash
+pnpm run ci
+pnpm exec playwright install chromium
+pnpm test:e2e
+docker build -t calculadora-electrica-pro:local .
+```
+
+## Entrega continua
+
+- `.github/workflows/ci.yml` valida PRs y `main` sin credenciales GCP.
+- `.github/workflows/deploy-staging.yml` espera CI verde en `main`, construye Docker con Buildx, publica un digest inmutable en Artifact Registry y despliega Cloud Run staging.
+- Cloud Build no participa del pipeline.
+
 ## Principios
 
 - La seguridad y la normativa prevalecen sobre la rapidez.
 - Cada resultado debe poder explicarse y reproducirse.
 - Las reglas normativas no se mezclarán con componentes de interfaz.
+- La interfaz seguirá Atomic Design para mantener componentes pequeños, accesibles y reutilizables.
 - Una recomendación no sustituye la revisión, medición ni firma de un instalador autorizado.
 - Las equivalencias entre mm² y AWG se tratarán como referencias, no como sustituciones exactas.
 

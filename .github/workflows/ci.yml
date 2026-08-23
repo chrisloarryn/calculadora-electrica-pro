@@ -1,0 +1,211 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: 'true'
+
+jobs:
+  quality:
+    name: Format, lint and types
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - name: Enable pnpm through Corepack
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check formatting
+        run: pnpm format:check
+      - name: Lint
+        run: pnpm lint
+      - name: Type-check
+        run: pnpm typecheck
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - name: Enable pnpm through Corepack
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run unit tests
+        run: pnpm test:unit
+
+  build:
+    name: Production build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - name: Enable pnpm through Corepack
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build application
+        run: pnpm build
+      - name: Validate PWA build contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/index.html
+          test -s dist/manifest.webmanifest
+          test -s dist/sw.js || test -s dist/service-worker.js
+          find dist/assets -type f -print -quit | grep -q .
+          find dist/assets -type f ! -name '*.map' -printf '%f\n' | grep -Eq -- '-[[:alnum:]_-]{8,}\.'
+      - name: Upload production bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: web-dist-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  e2e:
+    name: Mobile PWA end-to-end
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - name: Enable pnpm through Corepack
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run end-to-end tests
+        run: pnpm test:e2e
+      - name: Upload Playwright diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report-${{ github.sha }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  container:
+    name: Container contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Build container
+        run: docker build --pull --tag calculadora-electrica-pro:ci .
+      - name: Validate runtime contract
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cleanup() {
+            docker rm --force calculadora-electrica-pro-ci >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          configured_user="$(docker image inspect calculadora-electrica-pro:ci --format '{{.Config.User}}')"
+          test -n "$configured_user"
+          test "$configured_user" != "0"
+          test "$configured_user" != "root"
+
+          docker run --detach \
+            --name calculadora-electrica-pro-ci \
+            --publish 127.0.0.1:8080:8080 \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+            --tmpfs /var/cache/nginx:rw,noexec,nosuid,size=16m \
+            --tmpfs /var/run:rw,noexec,nosuid,size=4m \
+            calculadora-electrica-pro:ci
+
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error http://127.0.0.1:8080/healthz >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              docker logs calculadora-electrica-pro-ci
+              exit 1
+            fi
+            sleep 1
+          done
+
+          test "$(docker exec calculadora-electrica-pro-ci id -u)" != "0"
+          test "$(curl --fail --silent http://127.0.0.1:8080/healthz)" = "ok"
+          curl --fail --silent http://127.0.0.1:8080/ruta-spa-de-prueba | grep -q '<div id="root">'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/archivo-inexistente.js)" = "404"
+          curl --fail --silent --head http://127.0.0.1:8080/manifest.webmanifest | tr -d '\r' | grep -qi '^cache-control:.*no-cache'
+          curl --fail --silent --head http://127.0.0.1:8080/ | tr -d '\r' | grep -qi '^content-security-policy:'
+
+          asset_path="$(docker exec calculadora-electrica-pro-ci sh -c "find /usr/share/nginx/html/assets -type f ! -name '*.map' | head -n 1" | sed 's#^/usr/share/nginx/html##')"
+          test -n "$asset_path"
+          curl --fail --silent --head "http://127.0.0.1:8080${asset_path}" | tr -d '\r' | grep -qi '^cache-control:.*immutable'
+
+          source_map_path="$(docker exec calculadora-electrica-pro-ci sh -c "find /usr/share/nginx/html/assets -type f -name '*.map' | head -n 1" | sed 's#^/usr/share/nginx/html##')"
+          test -n "$source_map_path"
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:8080${source_map_path}")" = "404"
+
+  ci-gate:
+    name: ci-gate
+    if: ${{ always() }}
+    needs: [quality, unit, build, e2e, container]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require every CI job to pass
+        env:
+          NEEDS_JSON: ${{ toJson(needs) }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if printf '%s' "$NEEDS_JSON" | grep -Eq '"result": "(failure|cancelled|skipped)"'; then
+            printf '%s\n' "$NEEDS_JSON"
+            exit 1
+          fi
+          printf '%s\n' 'All required CI jobs passed.'

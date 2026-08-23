@@ -2,17 +2,17 @@
 
 ## Estado
 
-Este documento fija el contrato de infraestructura para la primera versión desplegable. El proyecto aún está en fase de diseño; el servicio se creará cuando exista un contenedor web verificable.
+Este documento fija el contrato de infraestructura para la primera versión desplegable. El contenedor web ya es verificable y el pipeline de staging realiza el bootstrap mínimo de forma idempotente.
 
-Se revisó el repositorio privado `chrisloarryn/cloud-functions-scheduler`, rama `develop`, y específicamente su workflow `deploy-movil-app-backendo-dev.yml`. Se reutilizan el proyecto GCP, la región, la autenticación mediante GitHub Actions y el flujo Cloud Build → Cloud Run. Se asignan nombres propios para evitar colisiones con sus servicios.
+Se revisó el repositorio privado `chrisloarryn/cloud-functions-scheduler`, rama `develop`, y específicamente su workflow `deploy-movil-app-backendo-dev.yml`. Se reutilizan el proyecto GCP, la región y la autenticación mediante GitHub Actions. Para esta aplicación, Docker Buildx construye en el runner de GitHub, publica en Artifact Registry y despliega Cloud Run sin usar Cloud Build.
 
 ## Topología inicial
 
 ```mermaid
 flowchart LR
     DEV[Push a main] --> GHA[GitHub Actions]
-    GHA --> CB[Cloud Build]
-    CB --> AR[Artifact Registry]
+    GHA --> DB[Docker Buildx]
+    DB --> AR[Artifact Registry]
     AR --> STG[Cloud Run staging]
     STG --> TEST[E2E + smoke]
     TEST --> APPROVAL[Aprobación]
@@ -50,16 +50,14 @@ Una consulta de solo lectura realizada el 23 de agosto de 2026 confirmó que est
 
 - `cloudresourcemanager.googleapis.com`
 - `iam.googleapis.com`
-- `cloudbuild.googleapis.com`
 - `artifactregistry.googleapis.com`
 - `run.googleapis.com`
 - `logging.googleapis.com`
 - `monitoring.googleapis.com`
-- `storage.googleapis.com`
 
 `serviceusage.googleapis.com` está deshabilitada y no bloquea el pipeline porque las APIs requeridas ya están activas. Solo se habilitará si el bootstrap se automatiza.
 
-Cloud Storage será una dependencia administrada para el staging de Cloud Build; no se creará un bucket de la aplicación ni se guardarán allí proyectos eléctricos. Secret Manager, una base de datos, autenticación, mensajería, tareas, VPC y API Gateway quedan fuera del MVP. La justificación y los disparadores futuros están en la sección 21.4 del [SDD](SDD.md).
+Cloud Build y Cloud Storage no participan del pipeline. No se creará un bucket de la aplicación ni se guardarán proyectos eléctricos en GCP. Secret Manager, una base de datos, autenticación, mensajería, tareas, VPC y API Gateway quedan fuera del MVP. La justificación y los disparadores futuros están en la sección 21.4 del [SDD](SDD.md).
 
 Los recursos `calculadora-electrica` de Artifact Registry, `calculadora-electrica-staging` y `calculadora-electrica-pro` de Cloud Run, y `calculadora-electrica-web@gcp-course-2024.iam.gserviceaccount.com` todavía no existen. Se crearán de forma idempotente junto con el primer contenedor verificable, no durante la fase documental.
 
@@ -108,14 +106,13 @@ Toda variable `VITE_*` es pública. Nunca debe contener tokens, claves, contrase
 
 Antes del primer despliegue se deberá:
 
-1. Revalidar que Cloud Build, Cloud Run, Artifact Registry, Resource Manager, IAM, Logging, Monitoring y Storage continúen habilitados.
+1. Revalidar que Cloud Run, Artifact Registry, Resource Manager, IAM, Logging y Monitoring continúen habilitados.
 2. Crear el repositorio Docker `calculadora-electrica` en `southamerica-west1` si no existe.
 3. Crear una cuenta runtime `calculadora-electrica-web` sin roles de proyecto.
-4. Verificar que la cuenta de servicio de GitHub pueda iniciar builds y desplegar el servicio, sin roles `Owner` ni `Editor`.
-5. Verificar que la cuenta de build pueda escribir la imagen y los logs.
-6. Verificar que Cloud Run pueda leer la imagen y que la identidad runtime no tenga permisos innecesarios.
-7. Configurar un uptime check y alertas básicas de errores y latencia.
-8. Reemplazar a futuro la clave JSON por Workload Identity Federation para eliminar credenciales de larga duración.
+4. Verificar que la cuenta de servicio de GitHub pueda escribir imágenes y desplegar el servicio, sin roles `Owner` ni `Editor`.
+5. Verificar que Cloud Run pueda leer la imagen y que la identidad runtime no tenga permisos innecesarios.
+6. Configurar un uptime check y alertas básicas de errores y latencia.
+7. Reemplazar a futuro la clave JSON por Workload Identity Federation para eliminar credenciales de larga duración.
 
 ## Dominio propio
 
@@ -123,7 +120,7 @@ El piloto usará la URL HTTPS `run.app`. `southamerica-west1` no admite la asign
 
 ## Contrato del contenedor web
 
-- Build multi-stage: Node 22 o posterior compatible para compilar Vite; imagen mínima para servir `dist/`.
+- Build multi-stage: Node 24 para compilar Vite; imagen Nginx no-root para servir `dist/`.
 - Escuchar en `0.0.0.0:$PORT`; en local se usará `8080`.
 - `GET /healthz` debe responder `200` sin dependencias externas.
 - Las rutas de la SPA devuelven `index.html`; archivos inexistentes con extensión deben devolver `404`.
@@ -137,7 +134,7 @@ El piloto usará la URL HTTPS `run.app`. `southamerica-west1` no admite la asign
 Los workflows se agregarán junto con el scaffold ejecutable para que nunca exista un pipeline verde sin una aplicación verificable:
 
 1. `ci.yml` valida cada PR sin secrets: lint, typecheck, motor, casos dorados, PWA, E2E, contenedor y supply chain.
-2. `deploy-staging.yml` repite los gates en `main`, construye una sola imagen con Cloud Build y la despliega por digest a `calculadora-electrica-staging`.
+2. `deploy-staging.yml` espera el `ci-gate` verde de `main`, construye una sola imagen con Docker Buildx, la publica con SBOM/provenance y la despliega por digest a `calculadora-electrica-staging`.
 3. `release-production.yml` toma ese mismo digest, espera aprobación, crea una revisión sin tráfico, prueba su URL etiquetada y luego mueve 100% del tráfico.
 4. `rollback-production.yml` devuelve tráfico a una revisión conocida sin reconstruir.
 
@@ -160,7 +157,7 @@ La aplicación no necesita API en el MVP. Si aparecen cuentas, sincronización, 
 
 - [Transición desde Container Registry](https://docs.cloud.google.com/artifact-registry/docs/transition/transition-from-gcr)
 - [Desplegar imágenes en Cloud Run](https://docs.cloud.google.com/run/docs/deploying)
-- [Desplegar en Cloud Run mediante Cloud Build](https://docs.cloud.google.com/build/docs/deploying-builds/deploy-cloud-run)
+- [Autenticarse en GCP desde GitHub Actions](https://github.com/google-github-actions/auth)
 - [Rollouts y rollback en Cloud Run](https://docs.cloud.google.com/run/docs/rollouts-rollbacks-traffic-migration)
 - [Logs de Cloud Run](https://docs.cloud.google.com/run/docs/logging)
 - [Monitoreo de Cloud Run](https://docs.cloud.google.com/run/docs/monitoring)

@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Estado | Propuesto para implementación |
-| Versión | 0.4.0 |
+| Versión | 0.5.0 |
 | Fecha | 23 de agosto de 2026 |
 | Producto | Calculadora Eléctrica Pro |
 | Plataforma | Aplicación web mobile-first instalable como PWA |
@@ -32,8 +32,8 @@ El MVP no requerirá una API. El motor de cálculo, las tablas normativas, el al
 ```mermaid
 flowchart LR
     GH[GitHub] --> CI[GitHub Actions]
-    CI --> CB[Cloud Build]
-    CB --> AR[Artifact Registry]
+    CI --> DB[Docker Buildx en runner]
+    DB --> AR[Artifact Registry]
     AR --> CR[Cloud Run web]
     CR --> UI
     U[Usuario] --> UI[Web mobile-first]
@@ -218,7 +218,7 @@ Una nueva versión de la PWA no modificará el proyecto mientras esté abierto. 
 
 Se reutilizará el proyecto GCP `gcp-course-2024`, pero se crearán recursos separados para esta aplicación. El servicio web será `calculadora-electrica-pro` en `southamerica-west1`, público y sin autenticación. Su contenedor servirá la SPA/PWA por el puerto indicado en `PORT`.
 
-Las imágenes nuevas se almacenarán en Artifact Registry. No se copiará la ruta `gcr.io` del repositorio de referencia porque Container Registry dejó de aceptar escrituras; se conservarán el proyecto, la región y el patrón GitHub Actions → Cloud Build → Cloud Run.
+Las imágenes nuevas se almacenarán en Artifact Registry. No se copiará la ruta `gcr.io` del repositorio de referencia porque Container Registry dejó de aceptar escrituras. GitHub Actions construirá el Dockerfile directamente con Buildx y desplegará el digest en Cloud Run; Cloud Build no forma parte del pipeline.
 
 ### ADR-008 — API opcional en Go 1.27
 
@@ -228,9 +228,15 @@ La interfaz pública para la PWA será HTTP/JSON por defecto. gRPC nativo se uti
 
 ### ADR-009 — CI/CD por promoción de artefacto inmutable
 
-GitHub Actions orquestará CI y CD; Cloud Build construirá la imagen; Artifact Registry la almacenará por digest; Cloud Run ejecutará staging y producción. Cada commit desplegable se construirá una sola vez. Producción recibirá exactamente el digest aprobado en staging, nunca una reconstrucción ni una etiqueta mutable como `latest`.
+GitHub Actions orquestará CI y CD, construirá la imagen con Docker Buildx y la publicará en Artifact Registry por digest; Cloud Run ejecutará staging y producción. Cada commit desplegable se construirá una sola vez. Producción recibirá exactamente el digest aprobado en staging, nunca una reconstrucción ni una etiqueta mutable como `latest`.
 
 Los pull requests no tendrán acceso a credenciales GCP. La entrega a producción estará protegida por un GitHub Environment, una revisión Cloud Run sin tráfico, smoke tests y promoción explícita. El rollback moverá tráfico a una revisión anterior sin reconstruir.
+
+### ADR-010 — Componentes de interfaz con Atomic Design
+
+La interfaz se organizará en `atoms`, `molecules`, `organisms`, `templates` y `pages`. Los átomos expresan controles y tokens visuales reutilizables; las moléculas combinan pocos átomos; los organismos encapsulan secciones completas; las plantillas resuelven layout; y las páginas conectan estado y casos de uso.
+
+`App` solo inicializará y compondrá la aplicación. Las reglas del dominio, persistencia y cálculos no vivirán en componentes visuales. Se evitarán abstracciones prematuras: un componente asciende a una capa reutilizable cuando tiene una responsabilidad clara y un contrato de propiedades estable, no solo para cumplir una taxonomía de carpetas.
 
 ## 9. Tecnologías propuestas
 
@@ -238,6 +244,7 @@ Los pull requests no tendrán acceso a credenciales GCP. La entrega a producció
 |---|---|
 | Lenguaje | TypeScript con modo estricto |
 | UI | React |
+| Sistema de componentes | Atomic Design con componentes tipados, accesibles y reutilizables |
 | Build | Vite |
 | PWA | Service worker basado en Workbox mediante integración de Vite |
 | Rutas | Router del lado cliente con fallback del host |
@@ -304,6 +311,11 @@ src/
 │   └── update-coordinator/
 ├── ui/
 │   ├── components/
+│   │   ├── atoms/
+│   │   ├── molecules/
+│   │   ├── organisms/
+│   │   └── templates/
+│   ├── pages/
 │   ├── tokens/
 │   └── accessibility/
 └── test/
@@ -796,14 +808,14 @@ Un job final y único llamado `ci-gate` agregará los resultados. La protección
 
 ```text
 Pull request → CI sin secretos → ci-gate → revisión → merge
-main → repetir gates → Cloud Build → Artifact Registry por SHA/digest
+main → CI verde → Docker Buildx en GitHub Actions → Artifact Registry por SHA/digest
      → Cloud Run staging → E2E/smoke → artefacto aprobado
 release manual/tag → aprobación production → misma imagen por digest
      → revisión production sin tráfico y con tag → smoke
      → tráfico 100% → smoke posterior → release publicada
 ```
 
-El flujo conserva del repositorio `cloud-functions-scheduler` la autenticación, Cloud Build, Cloud Run, filtros de rutas y concurrencia. Agrega los controles que faltan en su workflow de referencia: pruebas, imagen inmutable, staging, ambientes protegidos, smoke tests, promoción sin reconstruir y rollback.
+El flujo conserva del repositorio `cloud-functions-scheduler` la autenticación, Cloud Run, filtros de rutas y concurrencia. Sustituye Cloud Build por Docker Buildx en el runner de GitHub y agrega pruebas, imagen inmutable, staging, ambientes protegidos, smoke tests, promoción sin reconstruir y rollback.
 
 Contrato inicial de infraestructura:
 
@@ -827,7 +839,7 @@ El contenedor web se construirá en dos etapas: Node compilará Vite y una image
 
 Los assets tendrán nombres con hash. `index.html`, el manifest y el service worker tendrán caché corta o revalidación obligatoria; JS/CSS inmutables tendrán caché larga con `immutable`.
 
-La cuenta de servicio entregada se utilizará únicamente por GitHub Actions para construir y desplegar. Antes del primer despliegue se validarán permisos mínimos para Cloud Build, Artifact Registry, Cloud Run y uso de la identidad del servicio. En una mejora posterior se reemplazará la clave JSON por Workload Identity Federation.
+La cuenta de servicio entregada se utilizará únicamente por GitHub Actions para publicar en Artifact Registry y desplegar. Antes del primer despliegue se validarán permisos mínimos para Artifact Registry, Cloud Run y uso de la identidad del servicio. En una mejora posterior se reemplazará la clave JSON por Workload Identity Federation.
 
 ### 21.3 Contrato de CI/CD
 
@@ -840,7 +852,7 @@ La cuenta de servicio entregada se utilizará únicamente por GitHub Actions par
 | `release-production.yml` | Tag semántico `v*` o manual con SHA/digest validado | Sí, ambiente `production` | Promoción del mismo digest |
 | `rollback-production.yml` | Manual con revisión o digest anterior | Sí, ambiente `production` | Tráfico restaurado sin rebuild |
 
-Los workflows se crearán junto con el scaffold ejecutable. Los commits exclusivamente documentales no iniciarán Cloud Build ni modificarán Cloud Run.
+Los workflows se crearán junto con el scaffold ejecutable. Los commits exclusivamente documentales no construirán imágenes ni modificarán Cloud Run.
 
 #### 21.3.2 Gates de CI
 
@@ -873,7 +885,7 @@ La etiqueta semántica y cualquier alias humano serán referencias convenientes,
 
 1. Volver a ejecutar `ci-gate` sobre el SHA exacto de `main`.
 2. Autenticarse en GCP después de los tests; ningún job de prueba recibe credenciales.
-3. Construir una sola imagen mediante Cloud Build y publicarla en Artifact Registry.
+3. Construir una sola imagen mediante Docker Buildx en GitHub Actions y publicarla en Artifact Registry.
 4. Resolver y guardar su digest.
 5. Desplegar el digest a `calculadora-electrica-staging` con 100% del tráfico de ese servicio.
 6. Ejecutar smoke tests de `/`, `/healthz`, manifest, service worker, assets con hash, CSP y fallback SPA.
@@ -951,16 +963,14 @@ La selección se validó el 23 de agosto de 2026 mediante documentación oficial
 |---|---|---|---|---|
 | Cloud Resource Manager | `cloudresourcemanager.googleapis.com` | Bootstrap/CI | Habilitada | Resolver proyecto y aplicar políticas de recursos |
 | Identity and Access Management | `iam.googleapis.com` | Bootstrap/CI | Habilitada | Cuentas de servicio y permisos mínimos |
-| Cloud Build | `cloudbuild.googleapis.com` | CI/CD | Habilitada | Construir el contenedor reproducible |
 | Artifact Registry | `artifactregistry.googleapis.com` | CI/CD/runtime | Habilitada | Guardar imágenes Docker versionadas |
 | Cloud Run | `run.googleapis.com` | Runtime | Habilitada | Servir la PWA por HTTPS y escalar a cero |
 | Cloud Logging | `logging.googleapis.com` | Operación | Habilitada | Logs de build, request, sistema y contenedor |
 | Cloud Monitoring | `monitoring.googleapis.com` | Operación | Habilitada | Métricas nativas, uptime check y alertas básicas |
-| Cloud Storage | `storage.googleapis.com` | Dependencia administrada de CI | Habilitada | Staging temporal de fuentes de Cloud Build; no almacena proyectos de usuario |
 
 `serviceusage.googleapis.com` está deshabilitada. No es una dependencia del sitio ni del despliegue mientras las APIs anteriores permanezcan habilitadas. Solo se activará si infraestructura como código necesita consultar o habilitar servicios automáticamente.
 
-La aplicación en ejecución depende directamente solo de Cloud Run y de la lectura de su imagen desde Artifact Registry. Cloud Build y Cloud Storage intervienen al publicar; Resource Manager e IAM intervienen al autorizar; Logging y Monitoring operan de forma administrada. Ninguno de estos servicios recibirá proyectos, cargas, cálculos o PDFs del usuario.
+La aplicación en ejecución depende directamente solo de Cloud Run y de la lectura de su imagen desde Artifact Registry. La construcción ocurre en runners efímeros de GitHub Actions; Resource Manager e IAM intervienen al autorizar, y Logging y Monitoring operan de forma administrada. Ninguno de estos servicios recibirá proyectos, cargas, cálculos o PDFs del usuario.
 
 #### 21.4.2 Recursos de la aplicación
 
@@ -1008,17 +1018,17 @@ Hasta esa decisión, no se crearán Load Balancer, NEG, certificado, zona DNS, C
 
 | Identidad | Capacidad prevista |
 |---|---|
-| Cuenta de servicio de GitHub | Iniciar Cloud Build y desplegar revisiones; nunca ejecutar la aplicación |
-| Cuenta de ejecución de Cloud Build | Escribir la imagen, logs y, si el build despliega, administrar el servicio objetivo |
+| Cuenta de servicio de GitHub | Escribir imágenes en Artifact Registry y desplegar revisiones; nunca ejecutar la aplicación |
+| GitHub-hosted runner | Construir el Dockerfile con Buildx y publicar el digest; efímero y sin datos de usuario |
 | Cuenta runtime `calculadora-electrica-web` | Sin roles de proyecto en el MVP; sirve archivos estáticos |
 | Cloud Run service agent | Leer la imagen de Artifact Registry mediante permisos administrados o explícitos mínimos |
 
-La cuenta de GitHub no recibirá `Owner` ni `Editor`. Los permisos se limitarán por recurso cuando GCP lo permita. Si se usa una cuenta de build propia, los logs se enviarán con `CLOUD_LOGGING_ONLY`.
+La cuenta de GitHub no recibirá `Owner` ni `Editor`. Los permisos se limitarán por recurso cuando GCP lo permita.
 
 #### 21.4.6 Controles de costo y datos
 
 - Ambos servicios Cloud Run conservarán `min-instances=0`; staging tendrá `max-instances=1` y producción `max-instances=3` hasta contar con métricas reales.
-- Los builds remotos se ejecutarán al integrar cambios desplegables a `main`, no en cada edición documental.
+- Los builds Docker en GitHub Actions se ejecutarán al integrar cambios desplegables a `main`, no en cada edición documental.
 - Artifact Registry tendrá una política de limpieza para imágenes sin etiqueta y conservará revisiones suficientes para rollback.
 - Cloud Logging no recibirá payloads de cálculo y tendrá retención y exclusiones revisadas antes del piloto.
 - Se usarán primero las métricas nativas de Cloud Monitoring; no se crearán métricas personalizadas facturables sin un caso operativo.
@@ -1131,7 +1141,7 @@ Los cálculos y valores eléctricos nunca se incluirán automáticamente en tele
 - Todo digest de producción pasó antes por staging con el mismo SHA y metadata.
 - La revisión candidata se prueba por su URL etiquetada antes de recibir tráfico.
 - Un fallo posterior a la promoción restaura la revisión anterior sin rebuild.
-- Los cambios exclusivamente documentales no activan Cloud Build ni Cloud Run.
+- Los cambios exclusivamente documentales no construyen imágenes ni modifican Cloud Run.
 - El procedimiento de rollback se ensaya antes del piloto.
 - Los workflows no filtran secrets ni datos eléctricos en logs o artefactos.
 - Una release registra commit, digest, versiones de motor/perfil/esquema y evidencia de tests.

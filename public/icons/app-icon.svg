@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Calculadora Eléctrica Pro">
+  <defs>
+    <linearGradient id="icon-blue" x1="56" y1="32" x2="456" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#217cff"/>
+      <stop offset="1" stop-color="#102f5a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="#f2f7ff"/>
+  <rect x="44" y="44" width="424" height="424" rx="104" fill="url(#icon-blue)"/>
+  <circle cx="256" cy="256" r="154" fill="none" stroke="#65d4db" stroke-width="16" opacity=".45"/>
+  <path d="M284 112 159 284h92l-16 128 124-178h-88l13-122Z" fill="#fff"/>
+  <path d="M145 353h222" stroke="#65d4db" stroke-width="20" stroke-linecap="round"/>
+</svg>

@@ -3,9 +3,9 @@
 | Campo | Valor |
 |---|---|
 | Estado | Ruta propuesta para ejecución |
-| Versión | 1.0.0 |
+| Versión | 1.1.0 |
 | Fecha base | 23 de agosto de 2026 |
-| Arquitectura de referencia | [SDD 0.4.0](SDD.md) |
+| Arquitectura de referencia | [SDD 0.5.0](SDD.md) |
 | Rama principal | `main` |
 | Entrega inicial | PWA mobile-first en Cloud Run |
 
@@ -114,6 +114,7 @@ Trabajo:
 - Fijar versión de Node y package manager; versionar lockfile.
 - Configurar lint, formato, typecheck, Vitest y Playwright.
 - Crear la estructura de carpetas definida por el SDD.
+- Aplicar Atomic Design (`atoms`, `molecules`, `organisms`, `templates`, `pages`) y mantener `App` como compositor mínimo.
 - Añadir scripts `dev`, `build`, `lint`, `typecheck`, `test`, `test:e2e` y `ci`.
 - Crear `ci.yml` con jobs `quality`, `engine-tests`, `ui-tests`, `pwa-e2e`, `build`, `container`, `supply-chain` y `ci-gate`.
 - Añadir fixtures sintéticos; nunca datos reales.
@@ -133,6 +134,7 @@ Objetivo: validar pronto la cadena navegador → contenedor → GCP.
 Trabajo:
 
 - Crear layout mobile-first, router, tokens y páginas placeholder.
+- Construir el shell con componentes accesibles y reutilizables; probar sus contratos por composición.
 - Incorporar manifest, iconos iniciales y service worker de app shell.
 - Añadir página offline y flujo explícito de actualización.
 - Crear Dockerfile multi-stage y servidor estático no root.
@@ -148,7 +150,7 @@ Trabajo:
 Salida:
 
 - Cada merge desplegable a `main` publica automáticamente una app shell verificable en staging.
-- Un commit documental no ejecuta Cloud Build.
+- Un commit documental no construye imágenes ni despliega Cloud Run.
 - La PWA puede instalarse y abrir el shell offline tras la primera visita.
 
 ### R3 — Dominio y perfil normativo Chile
