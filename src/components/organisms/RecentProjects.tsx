@@ -10,7 +10,7 @@ interface RecentProjectsProps {
   onDuplicate?: (project: ProjectSummary) => void;
 }
 
-export function RecentProjects({ projects, onCreate, onOpen }: RecentProjectsProps) {
+export function RecentProjects({ projects, onCreate, onOpen, onDelete, onDuplicate }: RecentProjectsProps) {
   return (
     <section aria-labelledby="recent-projects-title" className="projects-section">
       <div className="section-heading">

@@ -119,7 +119,7 @@ export function ProjectsPage() {
         <button className="text-button" onClick={handleExport} type="button">Exportar proyectos</button>
         <label className="text-button" style={{ cursor: 'pointer' }}>
           Importar
-          <input type="file" accept="application/json" style={{ display: 'none' }} onChange={(e) => handleImport(e.target.files ? e.target.files[0] : null)} />
+          <input type="file" accept="application/json" style={{ display: 'none' }} onChange={(e) => handleImport((e.target.files && e.target.files[0]) || null)} />
         </label>
       </div>
 
