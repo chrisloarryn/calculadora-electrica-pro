@@ -113,7 +113,6 @@ jobs:
 
       - name: Bootstrap staging resources
         env:
-          DEPLOYER_SERVICE_ACCOUNT: ${{ env.GCP_PROJECT_ID }}@appspot.gserviceaccount.com
           RUNTIME_SERVICE_ACCOUNT: ${{ env.RUNTIME_SERVICE_ACCOUNT_NAME }}@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
         shell: bash
         run: |
@@ -138,12 +137,6 @@ jobs:
               --project "$GCP_PROJECT_ID" \
               --quiet
           fi
-
-          gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SERVICE_ACCOUNT" \
-            --member "serviceAccount:$DEPLOYER_SERVICE_ACCOUNT" \
-            --role roles/iam.serviceAccountUser \
-            --project "$GCP_PROJECT_ID" \
-            --quiet >/dev/null
 
           gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
 
