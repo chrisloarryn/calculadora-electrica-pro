@@ -1,6 +1,3 @@
-import fs from 'fs';
-import path from 'path';
-
 export type Profile = {
   id: string;
   version: string;
@@ -12,8 +9,6 @@ export type Profile = {
   differentials?: Array<{ sensibilidad_mA: number; i_n: number }>;
 };
 
-export function loadProfileFromFile(relPath: string): Profile {
-  const p = path.resolve(process.cwd(), relPath);
-  const raw = fs.readFileSync(p, { encoding: 'utf8' });
+export function parseProfile(raw: string): Profile {
   return JSON.parse(raw) as Profile;
 }

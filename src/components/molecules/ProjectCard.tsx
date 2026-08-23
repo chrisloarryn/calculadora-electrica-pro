@@ -35,7 +35,14 @@ export function ProjectCard({ project, onOpen, onDelete, onDuplicate }: ProjectC
           <p>{project.location}</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="text-button" aria-label={`Duplicar ${project.name}`} onClick={() => onDuplicate?.(project)} type="button">Duplicar</button>
+          <button
+            className="text-button"
+            aria-label={`Duplicar ${project.name}`}
+            onClick={() => onDuplicate?.(project)}
+            type="button"
+          >
+            Duplicar
+          </button>
           <IconButton
             aria-label={`Abrir ${project.name}`}
             icon="arrow-right"
@@ -43,7 +50,14 @@ export function ProjectCard({ project, onOpen, onDelete, onDuplicate }: ProjectC
             onClick={() => onOpen(project)}
             tone="soft"
           />
-          <button className="text-button danger" aria-label={`Eliminar ${project.name}`} onClick={() => onDelete?.(project.id)} type="button">Eliminar</button>
+          <button
+            className="text-button danger"
+            aria-label={`Eliminar ${project.name}`}
+            onClick={() => onDelete?.(project.id)}
+            type="button"
+          >
+            Eliminar
+          </button>
         </div>
       </div>
 

@@ -10,7 +10,13 @@ interface RecentProjectsProps {
   onDuplicate?: (project: ProjectSummary) => void;
 }
 
-export function RecentProjects({ projects, onCreate, onOpen, onDelete, onDuplicate }: RecentProjectsProps) {
+export function RecentProjects({
+  projects,
+  onCreate,
+  onOpen,
+  onDelete,
+  onDuplicate,
+}: RecentProjectsProps) {
   return (
     <section aria-labelledby="recent-projects-title" className="projects-section">
       <div className="section-heading">
@@ -25,7 +31,13 @@ export function RecentProjects({ projects, onCreate, onOpen, onDelete, onDuplica
 
       <div className="projects-grid">
         {projects.map((project) => (
-          <ProjectCard key={project.id} onOpen={onOpen} project={project} onDelete={onDelete as any} onDuplicate={onDuplicate as any} />
+          <ProjectCard
+            key={project.id}
+            onOpen={onOpen}
+            project={project}
+            onDelete={onDelete as any}
+            onDuplicate={onDuplicate as any}
+          />
         ))}
       </div>
     </section>

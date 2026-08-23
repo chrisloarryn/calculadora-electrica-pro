@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
-import { getAllProjects, saveProject, deleteProject, exportAll, importAll } from '../lib/storage';
+import { useEffect, useRef, useState } from 'react';
+import { deleteProject, exportAll, getAllProjects, importAll, saveProject } from '../lib/storage';
 import {
   CreateProjectDialog,
   type ProjectDraft,
@@ -32,27 +32,35 @@ export function ProjectsPage() {
 
   useEffect(() => {
     let mounted = true;
-    getAllProjects().then((stored) => {
-      if (!mounted) return;
-      if (stored && stored.length) {
-        setProjects(stored as ProjectSummary[]);
-      } else {
-        // seed initial demo project into storage
-        for (const p of initialProjects) {
-          saveProject(p).catch(() => {});
+    getAllProjects()
+      .then((stored) => {
+        if (!mounted) return;
+        if (stored && stored.length) {
+          setProjects(stored as ProjectSummary[]);
+        } else {
+          // seed initial demo project into storage
+          for (const p of initialProjects) {
+            saveProject(p).catch(() => {});
+          }
         }
-      }
-    }).catch(() => {});
-    return () => { mounted = false; };
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
     // debounce saves: persist each project
-    if (saveTimer.current) { window.clearTimeout(saveTimer.current); }
+    if (saveTimer.current) {
+      window.clearTimeout(saveTimer.current);
+    }
     saveTimer.current = window.setTimeout(() => {
       projects.forEach((p) => saveProject(p).catch(() => {}));
     }, 500);
-    return () => { if (saveTimer.current) window.clearTimeout(saveTimer.current); };
+    return () => {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    };
   }, [projects]);
 
   function createProject(draft: ProjectDraft) {
@@ -75,7 +83,12 @@ export function ProjectsPage() {
   }
 
   function duplicateProject(project: ProjectSummary) {
-    const copy: ProjectSummary = { ...project, id: `local-${String(Date.now())}`, name: `${project.name} (copia)`, updatedLabel: 'ahora' };
+    const copy: ProjectSummary = {
+      ...project,
+      id: `local-${String(Date.now())}`,
+      name: `${project.name} (copia)`,
+      updatedLabel: 'ahora',
+    };
     setProjects((current) => [copy, ...current]);
     saveProject(copy).catch(() => {});
   }
@@ -116,10 +129,17 @@ export function ProjectsPage() {
     <div className="dashboard">
       <ProjectsHero onCreate={() => setIsCreateOpen(true)} />
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <button className="text-button" onClick={handleExport} type="button">Exportar proyectos</button>
+        <button className="text-button" onClick={handleExport} type="button">
+          Exportar proyectos
+        </button>
         <label className="text-button" style={{ cursor: 'pointer' }}>
           Importar
-          <input type="file" accept="application/json" style={{ display: 'none' }} onChange={(e) => handleImport((e.target.files && e.target.files[0]) || null)} />
+          <input
+            type="file"
+            accept="application/json"
+            style={{ display: 'none' }}
+            onChange={(e) => handleImport((e.target.files && e.target.files[0]) || null)}
+          />
         </label>
       </div>
 

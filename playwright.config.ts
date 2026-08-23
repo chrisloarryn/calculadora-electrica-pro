@@ -19,7 +19,7 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   webServer: {
-    command: 'pnpm build && pnpm preview --host 127.0.0.1 --port 4173',
+    command: 'corepack pnpm build && corepack pnpm preview --host 127.0.0.1 --port 4173',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: !isCI,
     timeout: 120_000,
