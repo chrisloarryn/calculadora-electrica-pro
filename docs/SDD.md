@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Estado | Propuesto para implementación |
-| Versión | 0.3.0 |
+| Versión | 0.4.0 |
 | Fecha | 23 de agosto de 2026 |
 | Producto | Calculadora Eléctrica Pro |
 | Plataforma | Aplicación web mobile-first instalable como PWA |
@@ -21,7 +21,7 @@ Este SDD es la fuente principal para las decisiones de arquitectura. Los documen
 
 - [Análisis de las referencias](ANALISIS_REFERENCIA.md)
 - [Especificación inicial del motor](MOTOR_DE_CALCULO.md)
-- [Plan de implementación](PLAN_IMPLEMENTACION.md)
+- [Ruta de implementación](PLAN_IMPLEMENTACION.md)
 
 ## 2. Resumen de la solución
 
@@ -1138,57 +1138,21 @@ Los cálculos y valores eléctricos nunca se incluirán automáticamente en tele
 
 ## 24. Plan de implementación derivado
 
-### Hito 0 — Fundaciones y validación
+La fuente operativa es [Ruta de implementación](PLAN_IMPLEMENTACION.md), versión 1.0.0. Este SDD define qué construir; la ruta define orden, dependencias, PRs y gates.
 
-- Confirmar alcance Chile.
-- Nombrar revisor técnico.
-- Escribir ADR-001 a ADR-009.
-- Crear fixtures y primeros casos dorados.
-- Decidir catálogo métrico/AWG inicial.
+| Ruta | Resultado | Gate resumido |
+|---|---|---|
+| R0 | Baseline y casos iniciales | Alcance, contratos y cinco casos definidos |
+| R1 | Scaffold + CI | `ci-gate` verde sobre aplicación mínima |
+| R2 | PWA shell + staging | HTTPS, instalación, health y smoke verdes |
+| R3 | Dominio + perfil Chile | Esquemas y tablas versionados con fuente |
+| R4 | Motor validado | Casos dorados e invariantes aprobados |
+| R5 | Frontend + persistencia | Caso de cuatro circuitos guardado y reabierto |
+| R6 | Offline + informes | Flujo P0, PDF, SVG y JSON sin red |
+| R7 | Hardening + CD producción | Seguridad, accesibilidad y rollback aprobados |
+| R8 | Piloto + release | Revisión profesional y checklist firmados |
 
-### Hito 1 — Esqueleto PWA
-
-- Scaffold React + TypeScript + Vite.
-- Manifest, iconos y service worker.
-- Router, layout mobile-first y tokens.
-- IndexedDB y migración inicial.
-- `ci.yml` con `ci-gate`, build, typecheck, pruebas y escaneos.
-- Contenedor, Artifact Registry y servicio `calculadora-electrica-staging`.
-- `deploy-staging.yml` con imagen inmutable y E2E HTTPS.
-
-### Hito 2 — Dominio y motor
-
-- Esquemas de proyecto, circuito y carga.
-- Perfil `CL-SEC-RIC` inicial.
-- Corriente, demanda, capacidad corregida y caída.
-- Breaker y diferencial.
-- Explicaciones y estados.
-
-### Hito 3 — Experiencia de cálculo
-
-- Proyectos y selector de circuitos.
-- Editor básico/avanzado.
-- Tabla/tarjetas de cargas.
-- Resultado en vivo.
-- Autosave y recuperación.
-
-### Hito 4 — Informes y offline completo
-
-- Snapshot inmutable.
-- PDF.
-- Unifilar SVG.
-- Exportación/importación JSON.
-- Pruebas E2E offline e instalación.
-
-### Hito 5 — Piloto
-
-- Revisión profesional.
-- Corrección de casos dorados.
-- Pruebas en dispositivos objetivo.
-- Staging y canal de feedback.
-- Ambiente GitHub `production`, protección de `main` y revisión técnica.
-- Promoción por digest, smoke tests y rollback ensayado.
-- Decisión de salida a producción.
+Las rutas Plataforma (`R1 → R2`) y Dominio (`R3 → R4`) avanzan en paralelo después de R0. Convergen en R5. Ninguna feature funcional se integrará antes de que R1 instale CI, y ninguna recomendación pasa a piloto antes de R4.
 
 ## 25. Preguntas abiertas
 
