@@ -1,4 +1,9 @@
 import { useEffect, useState } from 'react';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Paper from '@mui/material/Paper';
+import Switch from '@mui/material/Switch';
+import TextField from '@mui/material/TextField';
 import { Button } from '../components/atoms/Button';
 import { Eyebrow } from '../components/atoms/Eyebrow';
 import { Icon } from '../components/atoms/Icon';
@@ -23,7 +28,7 @@ export function SettingsPage() {
       </div>
 
       <div className="settings-grid">
-        <div className="settings-card settings-card--form">
+        <Paper className="settings-card settings-card--form" elevation={1}>
           <span>
             <strong>Perfil normativo inicial</strong>
             <small>
@@ -31,171 +36,175 @@ export function SettingsPage() {
               reglas normativas activas.
             </small>
           </span>
-          <label>
-            País
-            <select
-              value={preferences.country}
-              onChange={(event) =>
-                setPreferences((current) => ({
-                  ...current,
-                  country: event.target.value as UiPreferences['country'],
-                }))
-              }
-            >
-              <option value="CL">Chile · CL-SEC-RIC</option>
-              <option value="AR">Argentina · perfil base</option>
-            </select>
-          </label>
-        </div>
+          <TextField
+            label="País"
+            select
+            size="small"
+            value={preferences.country}
+            onChange={(event) =>
+              setPreferences((current) => ({
+                ...current,
+                country: event.target.value as UiPreferences['country'],
+              }))
+            }
+          >
+            <MenuItem value="CL">Chile · CL-SEC-RIC</MenuItem>
+            <MenuItem value="AR">Argentina · perfil base</MenuItem>
+          </TextField>
+        </Paper>
 
-        <div className="settings-card settings-card--form">
+        <Paper className="settings-card settings-card--form" elevation={1}>
           <span>
             <strong>Valores iniciales de circuitos</strong>
             <small>
               Se aplican al crear circuitos nuevos; no sobrescriben circuitos guardados.
             </small>
           </span>
-          <label>
-            Tensión (V)
-            <input
-              min={1}
-              type="number"
-              value={preferences.defaultVoltageV}
-              onChange={(event) =>
-                setPreferences((current) => ({
-                  ...current,
-                  defaultVoltageV: Number(event.target.value),
-                }))
-              }
-            />
-          </label>
-          <label>
-            Método
-            <select
-              value={preferences.defaultInstallationMethod}
-              onChange={(event) =>
-                setPreferences((current) => ({
-                  ...current,
-                  defaultInstallationMethod: event.target
-                    .value as UiPreferences['defaultInstallationMethod'],
-                }))
-              }
-            >
-              <option value="B1">B1</option>
-              <option value="B2">B2</option>
-              <option value="C">C</option>
-              <option value="E">E</option>
-            </select>
-          </label>
-          <label>
-            Aislación
-            <select
-              value={preferences.defaultInsulationType}
-              onChange={(event) =>
-                setPreferences((current) => ({
-                  ...current,
-                  defaultInsulationType: event.target
-                    .value as UiPreferences['defaultInsulationType'],
-                }))
-              }
-            >
-              <option value="PVC">PVC</option>
-              <option value="XLPE">XLPE</option>
-            </select>
-          </label>
-          <label>
-            Temperatura (°C)
-            <input
-              type="number"
-              value={preferences.defaultAmbientTemperatureC}
-              onChange={(event) =>
-                setPreferences((current) => ({
-                  ...current,
-                  defaultAmbientTemperatureC: Number(event.target.value),
-                }))
-              }
-            />
-          </label>
-          <label>
-            Agrupamiento
-            <input
-              min={1}
-              type="number"
-              value={preferences.defaultGroupedCircuits}
-              onChange={(event) =>
-                setPreferences((current) => ({
-                  ...current,
-                  defaultGroupedCircuits: Number(event.target.value),
-                }))
-              }
-            />
-          </label>
-          <label>
-            Caída máxima (%)
-            <input
-              min={0.1}
-              step="0.1"
-              type="number"
-              value={preferences.defaultMaximumVoltageDropPercent}
-              onChange={(event) =>
-                setPreferences((current) => ({
-                  ...current,
-                  defaultMaximumVoltageDropPercent: Number(event.target.value),
-                }))
-              }
-            />
-          </label>
-          <label>
-            Régimen
-            <select
-              value={preferences.defaultLoadDuty}
-              onChange={(event) =>
-                setPreferences((current) => ({
-                  ...current,
-                  defaultLoadDuty: event.target.value as UiPreferences['defaultLoadDuty'],
-                }))
-              }
-            >
-              <option value="standard">Estándar</option>
-              <option value="continuous">Continua</option>
-              <option value="high-starting-current">Alto arranque</option>
-            </select>
-          </label>
-        </div>
-
-        <label className="settings-card">
-          <input
-            checked={preferences.showPrototypeNotice}
+          <TextField
+            label="Tensión (V)"
+            size="small"
+            type="number"
+            value={preferences.defaultVoltageV}
             onChange={(event) =>
               setPreferences((current) => ({
                 ...current,
-                showPrototypeNotice: event.target.checked,
+                defaultVoltageV: Number(event.target.value),
               }))
             }
-            type="checkbox"
+            slotProps={{ htmlInput: { min: 1 } }}
           />
-          <span>
-            <strong>Mostrar aviso de prototipo</strong>
-            <small>Ayuda a recordar que el motor normativo aún no está habilitado.</small>
-          </span>
-        </label>
-
-        <label className="settings-card">
-          <input
-            checked={preferences.rememberActiveProject}
+          <TextField
+            label="Método"
+            select
+            size="small"
+            value={preferences.defaultInstallationMethod}
             onChange={(event) =>
               setPreferences((current) => ({
                 ...current,
-                rememberActiveProject: event.target.checked,
+                defaultInstallationMethod: event.target
+                  .value as UiPreferences['defaultInstallationMethod'],
               }))
             }
-            type="checkbox"
+          >
+            <MenuItem value="B1">B1</MenuItem>
+            <MenuItem value="B2">B2</MenuItem>
+            <MenuItem value="C">C</MenuItem>
+            <MenuItem value="E">E</MenuItem>
+          </TextField>
+          <TextField
+            label="Aislación"
+            select
+            size="small"
+            value={preferences.defaultInsulationType}
+            onChange={(event) =>
+              setPreferences((current) => ({
+                ...current,
+                defaultInsulationType: event.target.value as UiPreferences['defaultInsulationType'],
+              }))
+            }
+          >
+            <MenuItem value="PVC">PVC</MenuItem>
+            <MenuItem value="XLPE">XLPE</MenuItem>
+          </TextField>
+          <TextField
+            label="Temperatura (°C)"
+            size="small"
+            type="number"
+            value={preferences.defaultAmbientTemperatureC}
+            onChange={(event) =>
+              setPreferences((current) => ({
+                ...current,
+                defaultAmbientTemperatureC: Number(event.target.value),
+              }))
+            }
           />
-          <span>
-            <strong>Recordar proyecto activo</strong>
-            <small>Vuelve al último proyecto abierto cuando reingresas a la app.</small>
-          </span>
-        </label>
+          <TextField
+            label="Agrupamiento"
+            size="small"
+            type="number"
+            value={preferences.defaultGroupedCircuits}
+            onChange={(event) =>
+              setPreferences((current) => ({
+                ...current,
+                defaultGroupedCircuits: Number(event.target.value),
+              }))
+            }
+            slotProps={{ htmlInput: { min: 1 } }}
+          />
+          <TextField
+            label="Caída máxima (%)"
+            size="small"
+            type="number"
+            value={preferences.defaultMaximumVoltageDropPercent}
+            onChange={(event) =>
+              setPreferences((current) => ({
+                ...current,
+                defaultMaximumVoltageDropPercent: Number(event.target.value),
+              }))
+            }
+            slotProps={{ htmlInput: { min: 0.1, step: 0.1 } }}
+          />
+          <TextField
+            label="Régimen"
+            select
+            size="small"
+            value={preferences.defaultLoadDuty}
+            onChange={(event) =>
+              setPreferences((current) => ({
+                ...current,
+                defaultLoadDuty: event.target.value as UiPreferences['defaultLoadDuty'],
+              }))
+            }
+          >
+            <MenuItem value="standard">Estándar</MenuItem>
+            <MenuItem value="continuous">Continua</MenuItem>
+            <MenuItem value="high-starting-current">Alto arranque</MenuItem>
+          </TextField>
+        </Paper>
+
+        <Paper className="settings-card" elevation={1}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={preferences.showPrototypeNotice}
+                onChange={(event) =>
+                  setPreferences((current) => ({
+                    ...current,
+                    showPrototypeNotice: event.target.checked,
+                  }))
+                }
+              />
+            }
+            label={
+              <span>
+                <strong>Mostrar aviso de prototipo</strong>
+                <small>Ayuda a recordar que el motor normativo aún no está habilitado.</small>
+              </span>
+            }
+          />
+        </Paper>
+
+        <Paper className="settings-card" elevation={1}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={preferences.rememberActiveProject}
+                onChange={(event) =>
+                  setPreferences((current) => ({
+                    ...current,
+                    rememberActiveProject: event.target.checked,
+                  }))
+                }
+              />
+            }
+            label={
+              <span>
+                <strong>Recordar proyecto activo</strong>
+                <small>Vuelve al último proyecto abierto cuando reingresas a la app.</small>
+              </span>
+            }
+          />
+        </Paper>
       </div>
 
       <div className="settings-actions">

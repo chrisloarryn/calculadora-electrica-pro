@@ -1,4 +1,6 @@
-import { Icon } from '../atoms/Icon';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import Alert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
 
 interface ToastProps {
   projectName: string;
@@ -7,15 +9,18 @@ interface ToastProps {
 
 export function Toast({ projectName, onClose }: ToastProps) {
   return (
-    <div className="toast" role="status">
-      <Icon name="check" size={18} />
-      <span>
+    <Snackbar anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }} className="toast" open>
+      <Alert
+        closeText="Cerrar aviso"
+        icon={<CheckCircleIcon fontSize="small" />}
+        onClose={onClose}
+        role="status"
+        severity="success"
+        variant="filled"
+      >
         <strong>{projectName}</strong>
         Editor activo para este proyecto.
-      </span>
-      <button aria-label="Cerrar aviso" onClick={onClose} type="button">
-        <Icon name="close" size={18} />
-      </button>
-    </div>
+      </Alert>
+    </Snackbar>
   );
 }

@@ -1,7 +1,8 @@
 import type { ComponentProps } from 'react';
+import MuiIconButton from '@mui/material/IconButton';
 import { Icon, type IconName } from './Icon';
 
-interface IconButtonProps extends Omit<ComponentProps<'button'>, 'children'> {
+interface IconButtonProps extends Omit<ComponentProps<'button'>, 'children' | 'color'> {
   icon: IconName;
   iconSize?: number;
   tone?: 'default' | 'soft';
@@ -20,8 +21,8 @@ export function IconButton({
     .join(' ');
 
   return (
-    <button className={classes} type={type} {...props}>
+    <MuiIconButton className={classes} type={type} {...props}>
       <Icon name={icon} size={iconSize} />
-    </button>
+    </MuiIconButton>
   );
 }

@@ -1,4 +1,5 @@
-import { Icon } from '../atoms/Icon';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import Paper from '@mui/material/Paper';
 
 interface MetricCardProps {
   label?: string;
@@ -10,23 +11,27 @@ interface MetricCardProps {
 export function MetricCard({ label, value, detail, tone = 'default' }: MetricCardProps) {
   if (tone === 'ready') {
     return (
-      <article className="metric-card metric-card--compact">
+      <Paper className="metric-card metric-card--compact" component="article" elevation={0}>
         <span className="metric-card__check">
-          <Icon name="check" size={18} />
+          <CheckCircleIcon aria-hidden="true" sx={{ fontSize: 18 }} />
         </span>
         <div>
           <strong>{label}</strong>
           <small>{detail}</small>
         </div>
-      </article>
+      </Paper>
     );
   }
 
   return (
-    <article className={`metric-card${tone === 'accent' ? ' metric-card--accent' : ''}`}>
+    <Paper
+      className={`metric-card${tone === 'accent' ? ' metric-card--accent' : ''}`}
+      component="article"
+      elevation={0}
+    >
       <span>{label}</span>
       <strong>{value}</strong>
       <small>{detail}</small>
-    </article>
+    </Paper>
   );
 }

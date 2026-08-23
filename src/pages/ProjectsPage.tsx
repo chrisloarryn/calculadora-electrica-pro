@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import DownloadIcon from '@mui/icons-material/Download';
+import UploadIcon from '@mui/icons-material/Upload';
+import Button from '@mui/material/Button';
 import { deleteProject, exportAll, getAllProjects, importAll, saveProject } from '../lib/storage';
 import {
   CreateProjectDialog,
@@ -160,10 +163,20 @@ export function ProjectsPage() {
         </div>
       ) : null}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <button className="text-button" onClick={handleExport} type="button">
+        <Button
+          className="text-button"
+          onClick={handleExport}
+          startIcon={<DownloadIcon />}
+          variant="outlined"
+        >
           Exportar proyectos
-        </button>
-        <label className="text-button" style={{ cursor: 'pointer' }}>
+        </Button>
+        <Button
+          className="text-button"
+          component="label"
+          startIcon={<UploadIcon />}
+          variant="outlined"
+        >
           Importar
           <input
             type="file"
@@ -171,7 +184,7 @@ export function ProjectsPage() {
             style={{ display: 'none' }}
             onChange={(e) => handleImport(e.target.files?.[0] ?? null)}
           />
-        </label>
+        </Button>
       </div>
 
       {showPrototypeNotice ? <PrototypeNotice /> : null}

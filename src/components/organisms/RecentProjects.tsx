@@ -1,4 +1,6 @@
-import { Icon } from '../atoms/Icon';
+import AddIcon from '@mui/icons-material/Add';
+import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
 import { Eyebrow } from '../atoms/Eyebrow';
 import { ProjectCard, type ProjectSummary } from '../molecules/ProjectCard';
 
@@ -24,11 +26,18 @@ export function RecentProjects({
       <div className="section-heading">
         <div>
           <Eyebrow>Continúa donde quedaste</Eyebrow>
-          <h2 id="recent-projects-title">Proyectos recientes</h2>
+          <Typography component="h2" id="recent-projects-title" variant="h5">
+            Proyectos recientes
+          </Typography>
         </div>
-        <button className="text-button" onClick={onCreate} type="button">
-          Nuevo <Icon name="plus" size={17} />
-        </button>
+        <Button
+          className="text-button"
+          endIcon={<AddIcon fontSize="small" />}
+          onClick={onCreate}
+          variant="text"
+        >
+          Nuevo
+        </Button>
       </div>
 
       <div className="projects-grid">

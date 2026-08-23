@@ -1,7 +1,8 @@
 import type { ComponentProps } from 'react';
+import MuiButton from '@mui/material/Button';
 import { Icon, type IconName } from './Icon';
 
-interface ButtonProps extends ComponentProps<'button'> {
+interface ButtonProps extends Omit<ComponentProps<'button'>, 'color'> {
   fullWidth?: boolean;
   icon?: IconName;
   iconPosition?: 'start' | 'end';
@@ -21,10 +22,16 @@ export function Button({
     .join(' ');
 
   return (
-    <button className={classes} type={type} {...props}>
-      {icon && iconPosition === 'start' ? <Icon name={icon} size={19} /> : null}
+    <MuiButton
+      className={classes}
+      endIcon={icon && iconPosition === 'end' ? <Icon name={icon} size={19} /> : undefined}
+      fullWidth={fullWidth}
+      startIcon={icon && iconPosition === 'start' ? <Icon name={icon} size={19} /> : undefined}
+      type={type}
+      variant="contained"
+      {...props}
+    >
       {children}
-      {icon && iconPosition === 'end' ? <Icon name={icon} size={19} /> : null}
-    </button>
+    </MuiButton>
   );
 }

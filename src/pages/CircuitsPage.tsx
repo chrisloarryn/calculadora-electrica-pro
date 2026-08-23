@@ -1,4 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import Alert from '@mui/material/Alert';
+import Grid from '@mui/material/Grid';
+import MenuItem from '@mui/material/MenuItem';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import { DeleteOutlined as DeleteOutlineIcon } from '@mui/icons-material';
 import { calculatePreliminaryCircuit } from '../calculation/circuit';
 import { chileLoadCatalog } from '../domain/loadCatalog';
 import { clSecRicProfile } from '../standards/clSecRic';
@@ -153,21 +160,21 @@ export function CircuitsPage() {
       </div>
 
       <div className="circuits-toolbar">
-        <label className="circuits-project-selector">
-          Proyecto activo
-          <select
-            aria-label="Proyecto activo"
-            value={activeProjectId ?? ''}
-            onChange={(event) => selectProject(event.target.value)}
-          >
-            <option value="">Selecciona un proyecto</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <TextField
+          fullWidth
+          label="Proyecto activo"
+          select
+          size="small"
+          value={activeProjectId ?? ''}
+          onChange={(event) => selectProject(event.target.value)}
+        >
+          <MenuItem value="">Selecciona un proyecto</MenuItem>
+          {projects.map((project) => (
+            <MenuItem key={project.id} value={project.id}>
+              {project.name}
+            </MenuItem>
+          ))}
+        </TextField>
         <Button disabled={!activeProject} icon="plus" onClick={createNewCircuit}>
           Nuevo circuito
         </Button>
@@ -198,7 +205,7 @@ export function CircuitsPage() {
 
         {activeCircuit ? (
           <div className="circuits-editor">
-            <section className="circuits-panel">
+            <Paper component="section" className="circuits-panel" elevation={1}>
               <div className="circuits-panel__header">
                 <h2>Parámetros del circuito</h2>
                 <div>
@@ -216,175 +223,165 @@ export function CircuitsPage() {
               </div>
               {activeCircuit.advanced ? (
                 <div className="circuits-form circuits-form--advanced">
-                  <label>
-                    Material
-                    <select
-                      value={activeCircuit.conductorMaterial}
-                      onChange={(event) =>
-                        updateCircuit({
-                          conductorMaterial: event.target
-                            .value as CircuitSummary['conductorMaterial'],
-                        })
-                      }
-                    >
-                      <option value="copper">Cobre</option>
-                      <option value="aluminium">Aluminio</option>
-                    </select>
-                  </label>
-                  <label>
-                    Método de instalación
-                    <select
-                      value={activeCircuit.installationMethod}
-                      onChange={(event) =>
-                        updateCircuit({
-                          installationMethod: event.target
-                            .value as CircuitSummary['installationMethod'],
-                        })
-                      }
-                    >
-                      <option value="B1">B1</option>
-                      <option value="B2">B2</option>
-                      <option value="C">C</option>
-                      <option value="E">E</option>
-                    </select>
-                  </label>
-                  <label>
-                    Aislación
-                    <select
-                      value={activeCircuit.insulationType}
-                      onChange={(event) =>
-                        updateCircuit({
-                          insulationType: event.target.value as CircuitSummary['insulationType'],
-                        })
-                      }
-                    >
-                      <option value="PVC">PVC</option>
-                      <option value="XLPE">XLPE</option>
-                    </select>
-                  </label>
-                  <label>
-                    Temperatura (°C)
-                    <input
-                      min={-10}
-                      type="number"
-                      value={activeCircuit.ambientTemperatureC}
-                      onChange={(event) =>
-                        updateCircuit({ ambientTemperatureC: Number(event.target.value) })
-                      }
-                    />
-                  </label>
-                  <label>
-                    Circuitos agrupados
-                    <input
-                      min={1}
-                      type="number"
-                      value={activeCircuit.groupedCircuits}
-                      onChange={(event) =>
-                        updateCircuit({ groupedCircuits: Number(event.target.value) })
-                      }
-                    />
-                  </label>
-                  <label>
-                    Límite caída (%)
-                    <input
-                      min={0.1}
-                      step="0.1"
-                      type="number"
-                      value={activeCircuit.maximumVoltageDropPercent}
-                      onChange={(event) =>
-                        updateCircuit({ maximumVoltageDropPercent: Number(event.target.value) })
-                      }
-                    />
-                  </label>
+                  <TextField
+                    label="Material"
+                    select
+                    size="small"
+                    value={activeCircuit.conductorMaterial}
+                    onChange={(event) =>
+                      updateCircuit({
+                        conductorMaterial: event.target
+                          .value as CircuitSummary['conductorMaterial'],
+                      })
+                    }
+                  >
+                    <MenuItem value="copper">Cobre</MenuItem>
+                    <MenuItem value="aluminium">Aluminio</MenuItem>
+                  </TextField>
+                  <TextField
+                    label="Método de instalación"
+                    select
+                    size="small"
+                    value={activeCircuit.installationMethod}
+                    onChange={(event) =>
+                      updateCircuit({
+                        installationMethod: event.target
+                          .value as CircuitSummary['installationMethod'],
+                      })
+                    }
+                  >
+                    <MenuItem value="B1">B1</MenuItem>
+                    <MenuItem value="B2">B2</MenuItem>
+                    <MenuItem value="C">C</MenuItem>
+                    <MenuItem value="E">E</MenuItem>
+                  </TextField>
+                  <TextField
+                    label="Aislación"
+                    select
+                    size="small"
+                    value={activeCircuit.insulationType}
+                    onChange={(event) =>
+                      updateCircuit({
+                        insulationType: event.target.value as CircuitSummary['insulationType'],
+                      })
+                    }
+                  >
+                    <MenuItem value="PVC">PVC</MenuItem>
+                    <MenuItem value="XLPE">XLPE</MenuItem>
+                  </TextField>
+                  <TextField
+                    label="Temperatura (°C)"
+                    size="small"
+                    type="number"
+                    value={activeCircuit.ambientTemperatureC}
+                    onChange={(event) =>
+                      updateCircuit({ ambientTemperatureC: Number(event.target.value) })
+                    }
+                    slotProps={{ htmlInput: { min: -10 } }}
+                  />
+                  <TextField
+                    label="Circuitos agrupados"
+                    size="small"
+                    type="number"
+                    value={activeCircuit.groupedCircuits}
+                    onChange={(event) =>
+                      updateCircuit({ groupedCircuits: Number(event.target.value) })
+                    }
+                    slotProps={{ htmlInput: { min: 1 } }}
+                  />
+                  <TextField
+                    label="Límite caída (%)"
+                    size="small"
+                    type="number"
+                    value={activeCircuit.maximumVoltageDropPercent}
+                    onChange={(event) =>
+                      updateCircuit({ maximumVoltageDropPercent: Number(event.target.value) })
+                    }
+                    slotProps={{ htmlInput: { min: 0.1, step: 0.1 } }}
+                  />
                 </div>
               ) : null}
               <div className="circuits-form">
-                <label>
-                  Nombre
-                  <input
-                    value={activeCircuit.name}
-                    onChange={(event) => updateCircuit({ name: event.target.value })}
-                    placeholder="Ej. iluminación planta baja"
-                  />
-                </label>
-                <label>
-                  Perfil
-                  <input disabled value={activeCircuit.standardProfile} />
-                </label>
-                <label>
-                  Sistema
-                  <select
-                    value={activeCircuit.system}
-                    onChange={(event) =>
-                      updateCircuit({ system: event.target.value as CircuitSummary['system'] })
-                    }
-                  >
-                    <option value="single-phase">Monofásico</option>
-                    <option value="three-phase">Trifásico</option>
-                  </select>
-                </label>
-                <label>
-                  Voltaje (V)
-                  <input
-                    min={1}
-                    type="number"
-                    value={activeCircuit.voltageV}
-                    onChange={(event) => updateCircuit({ voltageV: Number(event.target.value) })}
-                  />
-                </label>
-                <label>
-                  Factor de demanda
-                  <input
-                    disabled={activeCircuit.demandRule === 'profile-rule'}
-                    max={1}
-                    min={0.1}
-                    step="0.05"
-                    type="number"
-                    value={activeCircuit.demandFactor}
-                    onChange={(event) =>
-                      updateCircuit({ demandFactor: Number(event.target.value) })
-                    }
-                  />
-                </label>
-                <label>
-                  Regla de demanda
-                  <select
-                    value={activeCircuit.demandRule}
-                    onChange={(event) =>
-                      updateCircuit({
-                        demandRule: event.target.value as CircuitSummary['demandRule'],
-                      })
-                    }
-                  >
-                    <option value="manual">Manual</option>
-                    <option value="profile-rule">Perfil Chile (provisional)</option>
-                  </select>
-                </label>
-                <label>
-                  Distancia (m)
-                  <input
-                    min={0}
-                    type="number"
-                    value={activeCircuit.lengthM}
-                    onChange={(event) => updateCircuit({ lengthM: Number(event.target.value) })}
-                  />
-                </label>
-                <label>
-                  Curva breaker
-                  <select
-                    value={activeCircuit.breakerCurve}
-                    onChange={(event) =>
-                      updateCircuit({
-                        breakerCurve: event.target.value as CircuitSummary['breakerCurve'],
-                      })
-                    }
-                  >
-                    <option value="auto">Automática</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
-                    <option value="D">D</option>
-                  </select>
-                </label>
+                <TextField
+                  label="Nombre"
+                  placeholder="Ej. iluminación planta baja"
+                  size="small"
+                  value={activeCircuit.name}
+                  onChange={(event) => updateCircuit({ name: event.target.value })}
+                />
+                <TextField
+                  disabled
+                  label="Perfil"
+                  size="small"
+                  value={activeCircuit.standardProfile}
+                />
+                <TextField
+                  label="Sistema"
+                  select
+                  size="small"
+                  value={activeCircuit.system}
+                  onChange={(event) =>
+                    updateCircuit({ system: event.target.value as CircuitSummary['system'] })
+                  }
+                >
+                  <MenuItem value="single-phase">Monofásico</MenuItem>
+                  <MenuItem value="three-phase">Trifásico</MenuItem>
+                </TextField>
+                <TextField
+                  label="Voltaje (V)"
+                  size="small"
+                  type="number"
+                  value={activeCircuit.voltageV}
+                  onChange={(event) => updateCircuit({ voltageV: Number(event.target.value) })}
+                  slotProps={{ htmlInput: { min: 1 } }}
+                />
+                <TextField
+                  disabled={activeCircuit.demandRule === 'profile-rule'}
+                  label="Factor de demanda"
+                  size="small"
+                  type="number"
+                  value={activeCircuit.demandFactor}
+                  onChange={(event) => updateCircuit({ demandFactor: Number(event.target.value) })}
+                  slotProps={{ htmlInput: { min: 0.1, max: 1, step: 0.05 } }}
+                />
+                <TextField
+                  label="Regla de demanda"
+                  select
+                  size="small"
+                  value={activeCircuit.demandRule}
+                  onChange={(event) =>
+                    updateCircuit({
+                      demandRule: event.target.value as CircuitSummary['demandRule'],
+                    })
+                  }
+                >
+                  <MenuItem value="manual">Manual</MenuItem>
+                  <MenuItem value="profile-rule">Perfil Chile (provisional)</MenuItem>
+                </TextField>
+                <TextField
+                  label="Distancia (m)"
+                  size="small"
+                  type="number"
+                  value={activeCircuit.lengthM}
+                  onChange={(event) => updateCircuit({ lengthM: Number(event.target.value) })}
+                  slotProps={{ htmlInput: { min: 0 } }}
+                />
+                <TextField
+                  label="Curva breaker"
+                  select
+                  size="small"
+                  value={activeCircuit.breakerCurve}
+                  onChange={(event) =>
+                    updateCircuit({
+                      breakerCurve: event.target.value as CircuitSummary['breakerCurve'],
+                    })
+                  }
+                >
+                  <MenuItem value="auto">Automática</MenuItem>
+                  <MenuItem value="B">B</MenuItem>
+                  <MenuItem value="C">C</MenuItem>
+                  <MenuItem value="D">D</MenuItem>
+                </TextField>
               </div>
               <fieldset className="safety-selector">
                 <legend>Régimen de carga</legend>
@@ -410,9 +407,9 @@ export function CircuitsPage() {
                   </button>
                 ))}
               </fieldset>
-            </section>
+            </Paper>
 
-            <section className="circuits-panel">
+            <Paper component="section" className="circuits-panel" elevation={1}>
               <div className="circuits-panel__header">
                 <h2>Cargas del circuito</h2>
                 <Button icon="plus" onClick={addLoad}>
@@ -423,81 +420,100 @@ export function CircuitsPage() {
                 <div className="loads-list">
                   {activeCircuit.loads.map((load) => (
                     <div className="load-row" key={load.id}>
-                      <input
-                        aria-label="Artefacto"
+                      <TextField
+                        placeholder="Artefacto"
+                        size="small"
                         value={load.name}
                         onChange={(event) => updateLoad(load.id, { name: event.target.value })}
-                        placeholder="Artefacto"
+                        slotProps={{ htmlInput: { 'aria-label': 'Artefacto' } }}
                       />
-                      <select
-                        aria-label="Catálogo de cargas"
-                        defaultValue=""
+                      <TextField
+                        select
+                        size="small"
+                        value=""
                         onChange={(event) => applyCatalogItem(load.id, event.target.value)}
+                        slotProps={{
+                          select: { inputProps: { 'aria-label': 'Catálogo de cargas' } },
+                        }}
                       >
-                        <option value="">Catálogo</option>
+                        <MenuItem value="">Catálogo</MenuItem>
                         {chileLoadCatalog.map((item) => (
-                          <option key={item.name} value={item.name}>
+                          <MenuItem key={item.name} value={item.name}>
                             {item.name}
-                          </option>
+                          </MenuItem>
                         ))}
-                      </select>
-                      <select
-                        aria-label="Tipo de carga"
+                      </TextField>
+                      <TextField
+                        select
+                        size="small"
                         value={load.type}
                         onChange={(event) =>
                           updateLoad(load.id, { type: event.target.value as LoadType })
                         }
+                        slotProps={{
+                          select: { inputProps: { 'aria-label': 'Tipo de carga' } },
+                        }}
                       >
-                        <option value="lighting">Iluminación</option>
-                        <option value="outlet">Enchufe</option>
-                        <option value="resistive">Resistiva</option>
-                        <option value="motor">Motor</option>
-                        <option value="electronic">Electrónica</option>
-                        <option value="custom">Otra</option>
-                      </select>
-                      <input
-                        aria-label="Potencia W"
-                        min={0}
+                        <MenuItem value="lighting">Iluminación</MenuItem>
+                        <MenuItem value="outlet">Enchufe</MenuItem>
+                        <MenuItem value="resistive">Resistiva</MenuItem>
+                        <MenuItem value="motor">Motor</MenuItem>
+                        <MenuItem value="electronic">Electrónica</MenuItem>
+                        <MenuItem value="custom">Otra</MenuItem>
+                      </TextField>
+                      <TextField
+                        size="small"
                         type="number"
                         value={load.powerW}
                         onChange={(event) =>
                           updateLoad(load.id, { powerW: Number(event.target.value) })
                         }
+                        slotProps={{ htmlInput: { min: 0, 'aria-label': 'Potencia W' } }}
                       />
                       {activeCircuit.advanced ? (
                         <>
-                          <input
-                            aria-label="Factor de potencia"
-                            max={1}
-                            min={0.1}
-                            step="0.01"
+                          <TextField
+                            size="small"
                             type="number"
                             value={load.powerFactor}
                             onChange={(event) =>
                               updateLoad(load.id, { powerFactor: Number(event.target.value) })
                             }
+                            slotProps={{
+                              htmlInput: {
+                                min: 0.1,
+                                max: 1,
+                                step: 0.01,
+                                'aria-label': 'Factor de potencia',
+                              },
+                            }}
                           />
-                          <input
-                            aria-label="Rendimiento"
-                            max={1}
-                            min={0.1}
-                            step="0.01"
+                          <TextField
+                            size="small"
                             type="number"
                             value={load.efficiency}
                             onChange={(event) =>
                               updateLoad(load.id, { efficiency: Number(event.target.value) })
                             }
+                            slotProps={{
+                              htmlInput: {
+                                min: 0.1,
+                                max: 1,
+                                step: 0.01,
+                                'aria-label': 'Rendimiento',
+                              },
+                            }}
                           />
                         </>
                       ) : null}
-                      <input
-                        aria-label="Cantidad"
-                        min={1}
+                      <TextField
+                        size="small"
                         type="number"
                         value={load.quantity}
                         onChange={(event) =>
                           updateLoad(load.id, { quantity: Number(event.target.value) })
                         }
+                        slotProps={{ htmlInput: { min: 1, 'aria-label': 'Cantidad' } }}
                       />
                       <span>{(load.powerW * load.quantity).toLocaleString('es-CL')} W</span>
                       <button
@@ -506,7 +522,7 @@ export function CircuitsPage() {
                         onClick={() => removeLoad(load.id)}
                         type="button"
                       >
-                        Eliminar
+                        <DeleteOutlineIcon fontSize="small" /> Eliminar
                       </button>
                     </div>
                   ))}
@@ -516,9 +532,14 @@ export function CircuitsPage() {
                   Agrega al menos una carga para habilitar el cálculo preliminar.
                 </p>
               )}
-            </section>
+            </Paper>
 
-            <section className="calculation-result" aria-live="polite">
+            <Paper
+              component="section"
+              className="calculation-result"
+              elevation={1}
+              aria-live="polite"
+            >
               <div className="circuits-panel__header">
                 <h2>Resultados preliminares</h2>
                 <Button
@@ -530,108 +551,134 @@ export function CircuitsPage() {
                 </Button>
               </div>
               {result?.status === 'blocked' ? (
-                <p>{result.warnings.at(-1)}</p>
+                <Alert severity="error">{result.warnings.at(-1)}</Alert>
               ) : result ? (
                 <>
-                  <div className="result-grid">
-                    <span>
-                      Potencia instalada
-                      <strong>{result.installedPowerW.toLocaleString('es-CL')} W</strong>
-                    </span>
-                    <span>
-                      Potencia demandada
-                      <strong>{result.demandedPowerW.toLocaleString('es-CL')} W</strong>
-                    </span>
-                    <span>
-                      Corriente de diseño<strong>{result.designCurrentA.toFixed(2)} A</strong>
-                    </span>
-                    <span>
-                      Breaker sugerido<strong>{result.suggestedBreakerA ?? 'Sin calibre'} A</strong>
-                    </span>
-                    <span>
-                      Conductor automático
-                      <strong>{result.suggestedConductorMm2 ?? 'Sin sección'} mm²</strong>
-                    </span>
-                    <label>
-                      Conductor a evaluar
-                      <select
-                        aria-label="Conductor a evaluar"
-                        value={activeCircuit.selectedConductorMm2 ?? ''}
-                        onChange={(event) =>
-                          updateCircuit({
-                            selectedConductorMm2: event.target.value
-                              ? Number(event.target.value)
-                              : undefined,
-                          })
-                        }
-                      >
-                        <option value="">Automático</option>
-                        {clSecRicProfile.calibres?.map((calibre) => (
-                          <option key={String(calibre.mm2)} value={String(calibre.mm2)}>
-                            {String(calibre.mm2)} mm² · máx. perfil {String(calibre.i_max)} A
-                            {calibre.mm2 === result.suggestedConductorMm2 ? ' · Recomendada' : ''}
-                          </option>
-                        ))}
-                      </select>
-                      <strong>
-                        {result.evaluatedConductorMm2
-                          ? `${String(result.evaluatedConductorMm2)} mm²`
-                          : 'Sin sección'}
-                      </strong>
-                      <small>
-                        Capacidad de perfil: {result.evaluatedConductorCapacityA ?? 'sin dato'} A
-                      </small>
-                      {result.conductorReference ? (
+                  <Grid container className="result-grid" spacing={2}>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                      <span>
+                        Potencia instalada
+                        <strong>{result.installedPowerW.toLocaleString('es-CL')} W</strong>
+                      </span>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                      <span>
+                        Potencia demandada
+                        <strong>{result.demandedPowerW.toLocaleString('es-CL')} W</strong>
+                      </span>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                      <span>
+                        Corriente de diseño<strong>{result.designCurrentA.toFixed(2)} A</strong>
+                      </span>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                      <span>
+                        Breaker sugerido
+                        <strong>{result.suggestedBreakerA ?? 'Sin calibre'} A</strong>
+                      </span>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                      <span>
+                        Conductor automático
+                        <strong>{result.suggestedConductorMm2 ?? 'Sin sección'} mm²</strong>
+                      </span>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                      <Stack spacing={0.5}>
+                        <TextField
+                          label="Conductor a evaluar"
+                          select
+                          size="small"
+                          value={String(activeCircuit.selectedConductorMm2 ?? '')}
+                          onChange={(event) =>
+                            updateCircuit({
+                              selectedConductorMm2: event.target.value
+                                ? Number(event.target.value)
+                                : undefined,
+                            })
+                          }
+                        >
+                          <MenuItem value="">Automático</MenuItem>
+                          {clSecRicProfile.calibres?.map((calibre) => (
+                            <MenuItem key={String(calibre.mm2)} value={String(calibre.mm2)}>
+                              {String(calibre.mm2)} mm² · máx. perfil {String(calibre.i_max)} A
+                              {calibre.mm2 === result.suggestedConductorMm2 ? ' · Recomendada' : ''}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                        <strong>
+                          {result.evaluatedConductorMm2
+                            ? `${String(result.evaluatedConductorMm2)} mm²`
+                            : 'Sin sección'}
+                        </strong>
                         <small>
-                          Ref.: {result.conductorReference.nearestAwg} (
-                          {result.conductorReference.awgAreaMm2} mm²)
+                          Capacidad de perfil: {result.evaluatedConductorCapacityA ?? 'sin dato'} A
                         </small>
-                      ) : null}
-                    </label>
-                    <span>
-                      Caída estimada
-                      <strong>
-                        {result.estimatedVoltageDropPercent?.toFixed(2) ?? 'Sin dato'} %
-                      </strong>
-                      <small>
-                        Límite RIC circuito terminal: {String(result.maximumVoltageDropPercent)} %
-                      </small>
-                      <small>
-                        {result.isVoltageDropCompliant
-                          ? 'Cumple el límite preliminar'
-                          : 'No cumple el límite preliminar'}
-                      </small>
-                    </span>
-                    <span>
-                      Límite normativo RIC
-                      <strong>3 % circuito terminal · 5 % total</strong>
-                      <small>
-                        El 5 % corresponde al trayecto completo de la instalación, no solo este
-                        circuito.
-                      </small>
-                    </span>
-                    <span>
-                      Curva sugerida
-                      <strong>
-                        {activeCircuit.breakerCurve === 'auto'
-                          ? result.suggestedCurve
-                          : activeCircuit.breakerCurve}
-                      </strong>
-                    </span>
-                    <span>
-                      Diferencial sugerido
-                      <strong>
-                        {result.suggestedRcd
-                          ? `${String(result.suggestedRcd.sensitivityMa)} mA · ${result.suggestedRcd.class} · ${String(result.suggestedRcd.nominalCurrentA)} A`
-                          : 'Requiere evaluar uso'}
-                      </strong>
-                    </span>
-                  </div>
-                  <ul>
-                    {result.warnings.map((warning) => (
-                      <li key={warning}>{warning}</li>
-                    ))}
-                  </ul>
+                        {result.conductorReference ? (
+                          <small>
+                            Ref.: {result.conductorReference.nearestAwg} (
+                            {result.conductorReference.awgAreaMm2} mm²)
+                          </small>
+                        ) : null}
+                      </Stack>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                      <span>
+                        Caída estimada
+                        <strong>
+                          {result.estimatedVoltageDropPercent?.toFixed(2) ?? 'Sin dato'} %
+                        </strong>
+                        <small>
+                          Límite RIC circuito terminal: {String(result.maximumVoltageDropPercent)} %
+                        </small>
+                        <small>
+                          {result.isVoltageDropCompliant
+                            ? 'Cumple el límite preliminar'
+                            : 'No cumple el límite preliminar'}
+                        </small>
+                      </span>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                      <span>
+                        Límite normativo RIC
+                        <strong>3 % circuito terminal · 5 % total</strong>
+                        <small>
+                          El 5 % corresponde al trayecto completo de la instalación, no solo este
+                          circuito.
+                        </small>
+                      </span>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                      <span>
+                        Curva sugerida
+                        <strong>
+                          {activeCircuit.breakerCurve === 'auto'
+                            ? result.suggestedCurve
+                            : activeCircuit.breakerCurve}
+                        </strong>
+                      </span>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                      <span>
+                        Diferencial sugerido
+                        <strong>
+                          {result.suggestedRcd
+                            ? `${String(result.suggestedRcd.sensitivityMa)} mA · ${result.suggestedRcd.class} · ${String(result.suggestedRcd.nominalCurrentA)} A`
+                            : 'Requiere evaluar uso'}
+                        </strong>
+                      </span>
+                    </Grid>
+                  </Grid>
+                  {result.warnings.length > 0 ? (
+                    <Stack spacing={1}>
+                      {result.warnings.map((warning) => (
+                        <Alert key={warning} severity="warning">
+                          {warning}
+                        </Alert>
+                      ))}
+                    </Stack>
+                  ) : null}
                   <details>
                     <summary>Reglas y fuentes aplicadas</summary>
                     <ul>
@@ -650,7 +697,7 @@ export function CircuitsPage() {
               ) : (
                 <p>Selecciona un circuito para calcular.</p>
               )}
-            </section>
+            </Paper>
           </div>
         ) : (
           <div className="circuits-empty">

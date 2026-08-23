@@ -1,7 +1,15 @@
-import { useEffect, useId, useRef, type SyntheticEvent } from 'react';
-import { Button } from '../atoms/Button';
+import { type SyntheticEvent } from 'react';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import CloseIcon from '@mui/icons-material/Close';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { Eyebrow } from '../atoms/Eyebrow';
-import { IconButton } from '../atoms/IconButton';
 
 export interface ProjectDraft {
   name: string;
@@ -15,27 +23,9 @@ interface CreateProjectDialogProps {
 }
 
 export function CreateProjectDialog({ isOpen, onClose, onCreate }: CreateProjectDialogProps) {
-  const projectNameId = useId();
-  const projectLocationId = useId();
-  const projectNameRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    projectNameRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-
-    document.addEventListener('keydown', closeOnEscape);
-    return () => document.removeEventListener('keydown', closeOnEscape);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
-  function submit(event: SyntheticEvent<HTMLFormElement>) {
+  function submit(event: SyntheticEvent) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const data = new FormData(event.currentTarget as HTMLFormElement);
     const nameEntry = data.get('name');
     const locationEntry = data.get('location');
     const name = typeof nameEntry === 'string' ? nameEntry.trim() : '';
@@ -46,48 +36,70 @@ export function CreateProjectDialog({ isOpen, onClose, onCreate }: CreateProject
   }
 
   return (
-    <div className="dialog-backdrop" onMouseDown={onClose} role="presentation">
-      <section
-        aria-labelledby="create-project-title"
-        aria-modal="true"
-        className="dialog-sheet"
-        onMouseDown={(event) => event.stopPropagation()}
-        role="dialog"
-      >
-        <div aria-hidden="true" className="dialog-sheet__handle" />
-        <div className="dialog-sheet__header">
-          <div>
-            <Eyebrow>Nuevo espacio de trabajo</Eyebrow>
-            <h2 id="create-project-title">Crear proyecto</h2>
-          </div>
-          <IconButton aria-label="Cerrar" icon="close" onClick={onClose} />
+    <Dialog
+      aria-labelledby="create-project-title"
+      className="dialog-sheet"
+      onClose={onClose}
+      open={isOpen}
+      transitionDuration={0}
+      slotProps={{
+        paper: {
+          className: 'dialog-sheet',
+          component: 'form',
+          onSubmit: submit,
+        },
+      }}
+    >
+      <div aria-hidden="true" className="dialog-sheet__handle" />
+      <DialogTitle className="dialog-sheet__header" sx={{ alignItems: 'flex-start' }}>
+        <div>
+          <Eyebrow>Nuevo espacio de trabajo</Eyebrow>
+          <Typography component="h2" id="create-project-title" variant="h6">
+            Crear proyecto
+          </Typography>
         </div>
+        <IconButton aria-label="Cerrar" onClick={onClose} size="small">
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </DialogTitle>
 
-        <form className="project-form" onSubmit={submit}>
-          <label htmlFor={projectNameId}>Nombre del proyecto</label>
-          <input
-            id={projectNameId}
-            name="name"
-            placeholder="Ej. Remodelación oficina"
-            ref={projectNameRef}
-            required
-          />
+      <DialogContent className="project-form" dividers>
+        <TextField
+          autoFocus
+          fullWidth
+          label="Nombre del proyecto"
+          margin="dense"
+          name="name"
+          placeholder="Ej. Remodelación oficina"
+          slotProps={{ htmlInput: { required: true } }}
+        />
 
-          <label htmlFor={projectLocationId}>
-            Ubicación <span>(opcional)</span>
-          </label>
-          <input id={projectLocationId} name="location" placeholder="Comuna o referencia" />
+        <TextField
+          fullWidth
+          helperText="(opcional)"
+          label="Ubicación"
+          margin="dense"
+          name="location"
+          placeholder="Comuna o referencia"
+        />
 
-          <p className="form-help">
-            Este primer paso solo crea el borrador. No se emitirán recomendaciones eléctricas hasta
-            validar los datos y el perfil normativo.
-          </p>
+        <p className="form-help">
+          Este primer paso solo crea el borrador. No se emitirán recomendaciones eléctricas hasta
+          validar los datos y el perfil normativo.
+        </p>
+      </DialogContent>
 
-          <Button fullWidth icon="arrow-right" iconPosition="end" type="submit">
-            Crear borrador
-          </Button>
-        </form>
-      </section>
-    </div>
+      <DialogActions>
+        <Button
+          fullWidth
+          size="large"
+          endIcon={<ArrowForwardIcon />}
+          type="submit"
+          variant="contained"
+        >
+          Crear borrador
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

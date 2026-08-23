@@ -1,10 +1,16 @@
-import { Icon } from '../atoms/Icon';
+import ElectricBoltIcon from '@mui/icons-material/ElectricBolt';
+import Paper from '@mui/material/Paper';
 
 export function PrototypeNotice() {
   return (
-    <aside aria-label="Estado del producto" className="prototype-notice">
+    <Paper
+      aria-label="Estado del producto"
+      className="prototype-notice"
+      component="aside"
+      elevation={0}
+    >
       <span className="prototype-notice__icon">
-        <Icon name="bolt" size={20} />
+        <ElectricBoltIcon aria-hidden="true" sx={{ fontSize: 20 }} />
       </span>
       <div>
         <strong>Prototipo técnico</strong>
@@ -13,6 +19,6 @@ export function PrototypeNotice() {
           no como recomendación profesional.
         </p>
       </div>
-    </aside>
+    </Paper>
   );
 }

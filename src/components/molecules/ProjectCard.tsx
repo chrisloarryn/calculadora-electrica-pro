@@ -1,5 +1,11 @@
-import { Icon } from '../atoms/Icon';
-import { IconButton } from '../atoms/IconButton';
+import BoltIcon from '@mui/icons-material/Bolt';
+import ElectricBoltIcon from '@mui/icons-material/ElectricBolt';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import Button from '@mui/material/Button';
+import Card from '@mui/material/Card';
+import IconButton from '@mui/material/IconButton';
+import LinearProgress from '@mui/material/LinearProgress';
+import Typography from '@mui/material/Typography';
 import { StatusBadge } from '../atoms/StatusBadge';
 
 export interface ProjectSummary {
@@ -30,8 +36,9 @@ export function ProjectCard({
   const progressLabel = `${String(project.progress)}% de la configuración de ejemplo completada`;
 
   return (
-    <article
+    <Card
       className={`project-card${isActive ? ' project-card--active' : ''}`}
+      component="article"
       data-active={isActive ? 'true' : undefined}
     >
       <div className="project-card__topline">
@@ -42,59 +49,62 @@ export function ProjectCard({
 
       <div className="project-card__body">
         <div>
-          <h3>{project.name}</h3>
-          <p>{project.location}</p>
+          <Typography component="h3" variant="subtitle1">
+            {project.name}
+          </Typography>
+          <Typography component="p" variant="body2">
+            {project.location}
+          </Typography>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            className="text-button"
+          <Button
             aria-label={`Duplicar ${project.name}`}
+            className="text-button"
             onClick={() => onDuplicate?.(project)}
-            type="button"
+            size="small"
+            variant="text"
           >
             Duplicar
-          </button>
+          </Button>
           <IconButton
             aria-label={`Abrir ${project.name}`}
-            icon="arrow-right"
-            iconSize={20}
             onClick={() => onOpen(project)}
-            tone="soft"
-          />
-          <button
-            className="text-button danger"
+            size="small"
+          >
+            <ArrowForwardIcon fontSize="small" />
+          </IconButton>
+          <Button
             aria-label={`Eliminar ${project.name}`}
+            className="text-button danger"
+            color="error"
             onClick={() => onDelete?.(project.id)}
-            type="button"
+            size="small"
+            variant="text"
           >
             Eliminar
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="project-card__meta">
         <span>
-          <Icon name="circuits" size={17} />
+          <ElectricBoltIcon aria-hidden="true" sx={{ fontSize: 17 }} />
           {project.circuits} {project.circuits === 1 ? 'circuito' : 'circuitos'}
         </span>
         <span>Actualizado {project.updatedLabel}</span>
       </div>
 
-      <div
+      <LinearProgress
         aria-label={progressLabel}
-        aria-valuemax={100}
-        aria-valuemin={0}
-        aria-valuenow={project.progress}
         className="progress"
-        role="progressbar"
-      >
-        <span style={{ width: `${String(project.progress)}%` }} />
-      </div>
+        value={project.progress}
+        variant="determinate"
+      />
 
       <p className="project-card__notice">
-        <Icon name="bolt" size={16} />
-        Perfil normativo pendiente de validación
+        <BoltIcon aria-hidden="true" sx={{ fontSize: 16 }} />
+        {'Perfil normativo pendiente de validación'}
       </p>
-    </article>
+    </Card>
   );
 }

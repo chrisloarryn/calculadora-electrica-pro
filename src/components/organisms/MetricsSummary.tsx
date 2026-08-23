@@ -1,3 +1,4 @@
+import Box from '@mui/material/Box';
 import { MetricCard } from '../molecules/MetricCard';
 
 interface MetricsSummaryProps {
@@ -7,7 +8,7 @@ interface MetricsSummaryProps {
 
 export function MetricsSummary({ projectCount, circuitCount }: MetricsSummaryProps) {
   return (
-    <section aria-label="Resumen" className="metrics-grid">
+    <Box aria-label="Resumen" className="metrics-grid" component="section">
       <MetricCard
         detail="Borradores en esta sesión"
         label="Proyectos"
@@ -24,6 +25,6 @@ export function MetricsSummary({ projectCount, circuitCount }: MetricsSummaryPro
         label="Listo sin conexión"
         tone="ready"
       />
-    </section>
+    </Box>
   );
 }
