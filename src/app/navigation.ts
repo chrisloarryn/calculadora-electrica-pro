@@ -21,8 +21,7 @@ export const sectionCopy: Record<
 > = {
   circuits: {
     title: 'Circuitos',
-    description:
-      'Aquí podrás organizar cargas y parámetros cuando el motor de cálculo esté validado.',
+    description: 'Editor local por proyecto para organizar cargas y parámetros básicos.',
   },
   reports: {
     title: 'Informes',

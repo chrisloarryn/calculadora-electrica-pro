@@ -746,6 +746,157 @@ input:focus-visible {
   font-size: 1.15rem;
 }
 
+.circuits-page {
+  display: grid;
+  gap: 18px;
+}
+
+.circuits-page__hero {
+  display: grid;
+  gap: 10px;
+  max-width: 760px;
+}
+
+.circuits-page__icon {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  place-items: center;
+  color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.circuits-page h1,
+.circuits-panel h2 {
+  margin: 0;
+  color: var(--ink);
+  letter-spacing: -0.035em;
+}
+
+.circuits-page h1 {
+  font-size: clamp(2rem, 6vw, 3rem);
+}
+
+.circuits-page p,
+.circuits-panel p {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+.circuits-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.circuits-panel {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.circuits-form {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.circuits-form label,
+.circuit-card label {
+  display: grid;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.circuits-form input,
+.circuit-card input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #cfd9e6;
+  border-radius: 12px;
+  color: var(--ink);
+  background: #fbfcfe;
+}
+
+.circuits-list {
+  display: grid;
+  gap: 12px;
+}
+
+.circuit-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.circuit-card__header {
+  display: grid;
+  gap: 10px;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.circuit-card__grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.circuit-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.circuit-pill--borrador {
+  color: #775000;
+  background: #fff4ce;
+}
+
+.circuit-pill--listo {
+  color: #2d704c;
+  background: #effaf4;
+}
+
+.circuit-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.circuits-empty {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  border-radius: 18px;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.circuits-empty strong {
+  color: var(--ink);
+}
+
 .settings-page {
   display: grid;
   gap: 18px;
