@@ -15,9 +15,11 @@ export interface ProjectSummary {
 interface ProjectCardProps {
   project: ProjectSummary;
   onOpen: (project: ProjectSummary) => void;
+  onDelete?: (id: string) => void;
+  onDuplicate?: (project: ProjectSummary) => void;
 }
 
-export function ProjectCard({ project, onOpen }: ProjectCardProps) {
+export function ProjectCard({ project, onOpen, onDelete, onDuplicate }: ProjectCardProps) {
   const progressLabel = `${String(project.progress)}% de la configuración de ejemplo completada`;
 
   return (
@@ -32,13 +34,17 @@ export function ProjectCard({ project, onOpen }: ProjectCardProps) {
           <h3>{project.name}</h3>
           <p>{project.location}</p>
         </div>
-        <IconButton
-          aria-label={`Abrir ${project.name}`}
-          icon="arrow-right"
-          iconSize={20}
-          onClick={() => onOpen(project)}
-          tone="soft"
-        />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="text-button" aria-label={`Duplicar ${project.name}`} onClick={() => onDuplicate?.(project)} type="button">Duplicar</button>
+          <IconButton
+            aria-label={`Abrir ${project.name}`}
+            icon="arrow-right"
+            iconSize={20}
+            onClick={() => onOpen(project)}
+            tone="soft"
+          />
+          <button className="text-button danger" aria-label={`Eliminar ${project.name}`} onClick={() => onDelete?.(project.id)} type="button">Eliminar</button>
+        </div>
       </div>
 
       <div className="project-card__meta">

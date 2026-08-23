@@ -6,6 +6,8 @@ interface RecentProjectsProps {
   projects: ProjectSummary[];
   onCreate: () => void;
   onOpen: (project: ProjectSummary) => void;
+  onDelete?: (id: string) => void;
+  onDuplicate?: (project: ProjectSummary) => void;
 }
 
 export function RecentProjects({ projects, onCreate, onOpen }: RecentProjectsProps) {
@@ -23,7 +25,7 @@ export function RecentProjects({ projects, onCreate, onOpen }: RecentProjectsPro
 
       <div className="projects-grid">
         {projects.map((project) => (
-          <ProjectCard key={project.id} onOpen={onOpen} project={project} />
+          <ProjectCard key={project.id} onOpen={onOpen} project={project} onDelete={onDelete} onDuplicate={onDuplicate} />
         ))}
       </div>
     </section>
