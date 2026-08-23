@@ -666,6 +666,86 @@ input:focus-visible {
   line-height: 1.65;
 }
 
+.reports-page {
+  display: grid;
+  gap: 18px;
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.reports-page__hero {
+  display: grid;
+  gap: 10px;
+}
+
+.reports-page__icon {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  place-items: center;
+  color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.reports-page h1,
+.reports-panel h2 {
+  margin: 0;
+  color: var(--ink);
+  letter-spacing: -0.035em;
+}
+
+.reports-page h1 {
+  font-size: clamp(2rem, 6vw, 3rem);
+}
+
+.reports-page p,
+.reports-panel p {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+.reports-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.reports-card,
+.reports-panel {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.reports-card {
+  display: grid;
+  gap: 4px;
+}
+
+.reports-card strong {
+  color: var(--navy);
+  font-size: 2rem;
+  letter-spacing: -0.04em;
+}
+
+.reports-card span {
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+}
+
+.reports-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.reports-panel h2 {
+  font-size: 1.15rem;
+}
+
 .settings-page {
   display: grid;
   gap: 18px;

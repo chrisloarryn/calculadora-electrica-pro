@@ -20,11 +20,20 @@ interface ProjectCardProps {
   isActive?: boolean;
 }
 
-export function ProjectCard({ project, onOpen, onDelete, onDuplicate, isActive }: ProjectCardProps) {
+export function ProjectCard({
+  project,
+  onOpen,
+  onDelete,
+  onDuplicate,
+  isActive,
+}: ProjectCardProps) {
   const progressLabel = `${String(project.progress)}% de la configuración de ejemplo completada`;
 
   return (
-    <article className={`project-card${isActive ? ' project-card--active' : ''}`} data-active={isActive ? 'true' : undefined}>
+    <article
+      className={`project-card${isActive ? ' project-card--active' : ''}`}
+      data-active={isActive ? 'true' : undefined}
+    >
       <div className="project-card__topline">
         <StatusBadge label="Borrador" />
         {isActive ? <span className="project-card__active">Activo</span> : null}

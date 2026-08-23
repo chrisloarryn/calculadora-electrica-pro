@@ -10,11 +10,7 @@ import { RecentProjects } from '../components/organisms/RecentProjects';
 import { PrototypeNotice } from '../components/molecules/PrototypeNotice';
 import { Toast } from '../components/molecules/Toast';
 import type { ProjectSummary } from '../components/molecules/ProjectCard';
-import {
-  loadActiveProjectId,
-  loadUiPreferences,
-  saveActiveProjectId,
-} from '../lib/preferences';
+import { loadActiveProjectId, loadUiPreferences, saveActiveProjectId } from '../lib/preferences';
 
 const initialProjects: ProjectSummary[] = [
   {
@@ -53,7 +49,9 @@ export function ProjectsPage() {
           setProjects(stored);
           const preferences = loadUiPreferences();
           const restoredId = preferences.rememberActiveProject ? loadActiveProjectId() : null;
-          setActiveProjectId(stored.find((project) => project.id === restoredId)?.id ?? stored[0]?.id ?? null);
+          setActiveProjectId(
+            stored.find((project) => project.id === restoredId)?.id ?? stored[0]?.id ?? null,
+          );
         } else {
           // seed initial demo project into storage
           for (const p of initialProjects) {
@@ -156,7 +154,9 @@ export function ProjectsPage() {
       {activeProjectId ? (
         <div className="editor-banner" role="status">
           <strong>Editor activo</strong>
-          <span>{projects.find((project) => project.id === activeProjectId)?.name ?? 'Proyecto activo'}</span>
+          <span>
+            {projects.find((project) => project.id === activeProjectId)?.name ?? 'Proyecto activo'}
+          </span>
         </div>
       ) : null}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
