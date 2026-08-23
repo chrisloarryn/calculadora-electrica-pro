@@ -15,8 +15,11 @@ FROM nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5
 # Ensure PORT env is defined for Cloud Run and SDD compliance
 ENV PORT 8080
 
-# Install envsubst (gettext) so we can template nginx config at container start
-RUN apk add --no-cache gettext
+# Temporarily switch to root to install envsubst (gettext), then drop back to unprivileged user
+USER root
+RUN apk add --no-cache gettext && rm -rf /var/cache/apk/*
+
+# Back to unprivileged default user will be set at the end of the Dockerfile
 
 
 # Copy nginx template and serve built SPA
