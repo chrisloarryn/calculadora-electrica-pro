@@ -1,4 +1,7 @@
-export type Power = { value: number; unit: 'W' | 'kW' };
+export interface Power {
+  value: number;
+  unit: 'W' | 'kW';
+}
 
 export function wToKw(powerW: number): number {
   return powerW / 1000;
@@ -21,7 +24,10 @@ export function parsePositiveNumber(value: unknown): number {
   return n;
 }
 
-export type Voltage = { value: number; unit: 'V' };
+export interface Voltage {
+  value: number;
+  unit: 'V';
+}
 export function normalizeVoltage(v: number): Voltage {
   if (!Number.isFinite(v) || v <= 0) throw new Error('voltage must be > 0');
   return { value: v, unit: 'V' };
@@ -33,13 +39,17 @@ export function normalizePercentage(p: number): Percentage {
   return p;
 }
 
-export type Section = { mm2: number };
+export interface Section {
+  mm2: number;
+}
 export function normalizeSection(mm2: number): Section {
   if (!Number.isFinite(mm2) || mm2 <= 0) throw new Error('section must be > 0');
   return { mm2 };
 }
 
-export type Length = { meters: number };
+export interface Length {
+  meters: number;
+}
 export function normalizeLength(m: number): Length {
   if (!Number.isFinite(m) || m < 0) throw new Error('length must be >= 0');
   return { meters: m };

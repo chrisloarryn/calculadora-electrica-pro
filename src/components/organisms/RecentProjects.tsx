@@ -35,8 +35,8 @@ export function RecentProjects({
             key={project.id}
             onOpen={onOpen}
             project={project}
-            onDelete={onDelete as any}
-            onDuplicate={onDuplicate as any}
+            {...(onDelete ? { onDelete } : {})}
+            {...(onDuplicate ? { onDuplicate } : {})}
           />
         ))}
       </div>

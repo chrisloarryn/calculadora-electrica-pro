@@ -35,16 +35,16 @@ export function ProjectsPage() {
     getAllProjects()
       .then((stored) => {
         if (!mounted) return;
-        if (stored && stored.length) {
-          setProjects(stored as ProjectSummary[]);
+        if (stored.length > 0) {
+          setProjects(stored);
         } else {
           // seed initial demo project into storage
           for (const p of initialProjects) {
-            saveProject(p).catch(() => {});
+            void saveProject(p).catch(() => undefined);
           }
         }
       })
-      .catch(() => {});
+      .catch(() => undefined);
     return () => {
       mounted = false;
     };
@@ -56,7 +56,9 @@ export function ProjectsPage() {
       window.clearTimeout(saveTimer.current);
     }
     saveTimer.current = window.setTimeout(() => {
-      projects.forEach((p) => saveProject(p).catch(() => {}));
+      projects.forEach((project) => {
+        void saveProject(project).catch(() => undefined);
+      });
     }, 500);
     return () => {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
@@ -73,13 +75,13 @@ export function ProjectsPage() {
       progress: 8,
     };
     setProjects((current) => [newProj, ...current]);
-    saveProject(newProj).catch(() => {});
+    void saveProject(newProj).catch(() => undefined);
     setIsCreateOpen(false);
   }
 
   function deleteLocalProject(id: string) {
     setProjects((current) => current.filter((p) => p.id !== id));
-    deleteProject(id).catch(() => {});
+    void deleteProject(id).catch(() => undefined);
   }
 
   function duplicateProject(project: ProjectSummary) {
@@ -90,7 +92,7 @@ export function ProjectsPage() {
       updatedLabel: 'ahora',
     };
     setProjects((current) => [copy, ...current]);
-    saveProject(copy).catch(() => {});
+    void saveProject(copy).catch(() => undefined);
   }
 
   async function handleExport() {
@@ -117,7 +119,7 @@ export function ProjectsPage() {
       const text = await file.text();
       await importAll(text);
       const stored = await getAllProjects();
-      setProjects(stored as ProjectSummary[]);
+      setProjects(stored);
       alert('Import successful');
     } catch (e) {
       console.error(e);
@@ -138,7 +140,7 @@ export function ProjectsPage() {
             type="file"
             accept="application/json"
             style={{ display: 'none' }}
-            onChange={(e) => handleImport((e.target.files && e.target.files[0]) || null)}
+            onChange={(e) => handleImport(e.target.files?.[0] ?? null)}
           />
         </label>
       </div>
