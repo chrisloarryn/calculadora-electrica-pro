@@ -19,6 +19,12 @@ export const conductorReferencesByCountry: Record<'CL' | 'AR', ConductorReferenc
   AR: metricAwgReferences,
 };
 
-export function getConductorReference(country: 'CL' | 'AR', metricMm2: number): ConductorReference | null {
-  return conductorReferencesByCountry[country].find((reference) => reference.metricMm2 === metricMm2) ?? null;
+export function getConductorReference(
+  country: 'CL' | 'AR',
+  metricMm2: number,
+): ConductorReference | null {
+  return (
+    conductorReferencesByCountry[country].find((reference) => reference.metricMm2 === metricMm2) ??
+    null
+  );
 }

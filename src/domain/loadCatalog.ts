@@ -38,7 +38,8 @@ export const chileLoadCatalog: LoadCatalogItem[] = [
     nominalVoltageV: 380,
     phases: 3,
     source: 'SEC Resolución Exenta Electrónica N°24215, 03-04-2024; RIC N°15.',
-    notes: 'Autorización de producto para instalaciones específicas. Verificar compatibilidad del caso, datos de placa y requisitos RIC N°15.',
+    notes:
+      'Autorización de producto para instalaciones específicas. Verificar compatibilidad del caso, datos de placa y requisitos RIC N°15.',
   },
   {
     name: 'Cortina eléctrica RF 230 V',

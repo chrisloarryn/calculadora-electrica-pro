@@ -64,8 +64,10 @@ function estimateVoltageDropPercent(
   const resistivity = resistivityByMaterial[circuit.conductorMaterial];
   const systemMultiplier = circuit.system === 'three-phase' ? Math.sqrt(3) : 2;
   const powerFactor = circuit.system === 'three-phase' ? averagePowerFactor : 1;
-  return (systemMultiplier * circuit.lengthM * currentA * resistivity * powerFactor * 100) /
-    (conductorMm2 * circuit.voltageV);
+  return (
+    (systemMultiplier * circuit.lengthM * currentA * resistivity * powerFactor * 100) /
+    (conductorMm2 * circuit.voltageV)
+  );
 }
 
 export function calculatePreliminaryCircuit(circuit: CircuitSummary): PreliminaryCircuitResult {
@@ -85,7 +87,9 @@ export function calculatePreliminaryCircuit(circuit: CircuitSummary): Preliminar
   if (circuit.standardProfile !== 'CL-SEC-RIC') {
     return blockedResult(
       0,
-      ['El perfil Argentina está registrado para compatibilidad, pero todavía no contiene reglas verificadas de cálculo.'],
+      [
+        'El perfil Argentina está registrado para compatibilidad, pero todavía no contiene reglas verificadas de cálculo.',
+      ],
       maximumVoltageDropPercent,
     );
   }
