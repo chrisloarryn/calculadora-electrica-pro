@@ -3,16 +3,19 @@ import { Button } from '../components/atoms/Button';
 import { Eyebrow } from '../components/atoms/Eyebrow';
 import { Icon } from '../components/atoms/Icon';
 import { exportAll, getAllProjects } from '../lib/storage';
+import { loadSnapshots, type CircuitSnapshot } from '../lib/snapshots';
 import type { ProjectSummary } from '../components/molecules/ProjectCard';
 
 export function ReportsPage() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [isExporting, setIsExporting] = useState(false);
+  const [snapshots, setSnapshots] = useState<CircuitSnapshot[]>([]);
 
   useEffect(() => {
     getAllProjects()
       .then((stored) => {
         setProjects(stored);
+        setSnapshots(loadSnapshots());
       })
       .catch(() => {
         setProjects([]);
@@ -59,6 +62,30 @@ export function ReportsPage() {
           <strong>{activeProjects}</strong>
           <span>Proyectos con avance</span>
         </article>
+        <article className="reports-card">
+          <strong>{snapshots.length}</strong>
+          <span>Snapshots de circuitos</span>
+        </article>
+      </div>
+
+      <div className="reports-panel">
+        <h2>Snapshots guardados</h2>
+        {snapshots.length > 0 ? (
+          <div className="reports-snapshots">
+            {snapshots.map((snapshot) => (
+              <article key={snapshot.id}>
+                <strong>{snapshot.circuit.name || 'Circuito sin nombre'}</strong>
+                <span>
+                  {new Date(snapshot.createdAt).toLocaleString('es-CL')} ·{' '}
+                  {snapshot.result.designCurrentA.toFixed(2)} A · Estado{' '}
+                  {snapshot.result.status === 'warning' ? 'preliminar' : 'bloqueado'}
+                </span>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p>Guarda un snapshot desde Circuitos para congelar sus entradas y resultados.</p>
+        )}
       </div>
 
       <div className="reports-panel">

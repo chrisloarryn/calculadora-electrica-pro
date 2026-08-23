@@ -10,8 +10,10 @@ import {
   saveCircuits,
   type CircuitLoad,
   type CircuitSummary,
+  type LoadType,
 } from '../lib/circuits';
 import { loadActiveProjectId, loadUiPreferences, saveActiveProjectId } from '../lib/preferences';
+import { saveSnapshot } from '../lib/snapshots';
 import { getAllProjects } from '../lib/storage';
 import type { ProjectSummary } from '../components/molecules/ProjectCard';
 
@@ -101,6 +103,18 @@ export function CircuitsPage() {
     setActiveCircuitId(next[0]?.id ?? null);
   }
 
+  function createSnapshot() {
+    if (!activeCircuit || !activeProjectId || !result || result.status === 'blocked') return;
+    saveSnapshot({
+      id: `snapshot-${String(Date.now())}`,
+      projectId: activeProjectId,
+      circuitId: activeCircuit.id,
+      createdAt: new Date().toISOString(),
+      circuit: activeCircuit,
+      result,
+    });
+  }
+
   return (
     <section className="circuits-page" aria-labelledby="circuits-title">
       <div className="circuits-page__hero">
@@ -164,10 +178,72 @@ export function CircuitsPage() {
             <section className="circuits-panel">
               <div className="circuits-panel__header">
                 <h2>Parámetros del circuito</h2>
-                <button className="text-button danger" onClick={deleteCircuit} type="button">
-                  Eliminar
-                </button>
+                <div>
+                  <button
+                    className="text-button"
+                    onClick={() => updateCircuit({ advanced: !activeCircuit.advanced })}
+                    type="button"
+                  >
+                    {activeCircuit.advanced ? 'Modo básico' : 'Modo avanzado'}
+                  </button>
+                  <button className="text-button danger" onClick={deleteCircuit} type="button">
+                    Eliminar
+                  </button>
+                </div>
               </div>
+              {activeCircuit.advanced ? (
+                <div className="circuits-form circuits-form--advanced">
+                  <label>
+                    Material
+                    <select
+                      value={activeCircuit.conductorMaterial}
+                      onChange={(event) =>
+                        updateCircuit({
+                          conductorMaterial: event.target
+                            .value as CircuitSummary['conductorMaterial'],
+                        })
+                      }
+                    >
+                      <option value="copper">Cobre</option>
+                      <option value="aluminium">Aluminio</option>
+                    </select>
+                  </label>
+                  <label>
+                    Temperatura (°C)
+                    <input
+                      min={-10}
+                      type="number"
+                      value={activeCircuit.ambientTemperatureC}
+                      onChange={(event) =>
+                        updateCircuit({ ambientTemperatureC: Number(event.target.value) })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Circuitos agrupados
+                    <input
+                      min={1}
+                      type="number"
+                      value={activeCircuit.groupedCircuits}
+                      onChange={(event) =>
+                        updateCircuit({ groupedCircuits: Number(event.target.value) })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Límite caída (%)
+                    <input
+                      min={0.1}
+                      step="0.1"
+                      type="number"
+                      value={activeCircuit.maximumVoltageDropPercent}
+                      onChange={(event) =>
+                        updateCircuit({ maximumVoltageDropPercent: Number(event.target.value) })
+                      }
+                    />
+                  </label>
+                </div>
+              ) : null}
               <div className="circuits-form">
                 <label>
                   Nombre
@@ -272,6 +348,20 @@ export function CircuitsPage() {
                         onChange={(event) => updateLoad(load.id, { name: event.target.value })}
                         placeholder="Artefacto"
                       />
+                      <select
+                        aria-label="Tipo de carga"
+                        value={load.type}
+                        onChange={(event) =>
+                          updateLoad(load.id, { type: event.target.value as LoadType })
+                        }
+                      >
+                        <option value="lighting">Iluminación</option>
+                        <option value="outlet">Enchufe</option>
+                        <option value="resistive">Resistiva</option>
+                        <option value="motor">Motor</option>
+                        <option value="electronic">Electrónica</option>
+                        <option value="custom">Otra</option>
+                      </select>
                       <input
                         aria-label="Potencia W"
                         min={0}
@@ -281,6 +371,32 @@ export function CircuitsPage() {
                           updateLoad(load.id, { powerW: Number(event.target.value) })
                         }
                       />
+                      {activeCircuit.advanced ? (
+                        <>
+                          <input
+                            aria-label="Factor de potencia"
+                            max={1}
+                            min={0.1}
+                            step="0.01"
+                            type="number"
+                            value={load.powerFactor}
+                            onChange={(event) =>
+                              updateLoad(load.id, { powerFactor: Number(event.target.value) })
+                            }
+                          />
+                          <input
+                            aria-label="Rendimiento"
+                            max={1}
+                            min={0.1}
+                            step="0.01"
+                            type="number"
+                            value={load.efficiency}
+                            onChange={(event) =>
+                              updateLoad(load.id, { efficiency: Number(event.target.value) })
+                            }
+                          />
+                        </>
+                      ) : null}
                       <input
                         aria-label="Cantidad"
                         min={1}
@@ -310,7 +426,16 @@ export function CircuitsPage() {
             </section>
 
             <section className="calculation-result" aria-live="polite">
-              <h2>Resultados preliminares</h2>
+              <div className="circuits-panel__header">
+                <h2>Resultados preliminares</h2>
+                <Button
+                  disabled={!result || result.status === 'blocked'}
+                  icon="document"
+                  onClick={createSnapshot}
+                >
+                  Guardar snapshot
+                </Button>
+              </div>
               {result?.status === 'blocked' ? (
                 <p>{result.warnings.at(-1)}</p>
               ) : result ? (
@@ -340,12 +465,28 @@ export function CircuitsPage() {
                         {result.estimatedVoltageDropPercent?.toFixed(2) ?? 'Sin dato'} %
                       </strong>
                     </span>
+                    <span>
+                      Curva sugerida
+                      <strong>
+                        {activeCircuit.breakerCurve === 'auto'
+                          ? result.suggestedCurve
+                          : activeCircuit.breakerCurve}
+                      </strong>
+                    </span>
                   </div>
                   <ul>
                     {result.warnings.map((warning) => (
                       <li key={warning}>{warning}</li>
                     ))}
                   </ul>
+                  <details>
+                    <summary>Reglas y fuentes aplicadas</summary>
+                    <ul>
+                      {result.appliedRules.map((rule) => (
+                        <li key={rule}>{rule}</li>
+                      ))}
+                    </ul>
+                  </details>
                 </>
               ) : (
                 <p>Selecciona un circuito para calcular.</p>

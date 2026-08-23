@@ -746,6 +746,24 @@ input:focus-visible {
   font-size: 1.15rem;
 }
 
+.reports-snapshots {
+  display: grid;
+  gap: 8px;
+}
+
+.reports-snapshots article {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #f4f7fb;
+}
+
+.reports-snapshots span {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
 .circuits-page {
   display: grid;
   gap: 18px;

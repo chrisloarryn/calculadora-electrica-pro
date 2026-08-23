@@ -11,8 +11,23 @@ const circuit: CircuitSummary = {
   safetyFactor: 1,
   lengthM: 20,
   breakerCurve: 'auto',
+  advanced: false,
+  conductorMaterial: 'copper',
+  ambientTemperatureC: 30,
+  groupedCircuits: 1,
+  maximumVoltageDropPercent: 3,
   status: 'borrador',
-  loads: [{ id: 'l1', name: 'Luces', powerW: 1000, quantity: 1, powerFactor: 1, efficiency: 1 }],
+  loads: [
+    {
+      id: 'l1',
+      name: 'Luces',
+      type: 'lighting',
+      powerW: 1000,
+      quantity: 1,
+      powerFactor: 1,
+      efficiency: 1,
+    },
+  ],
 };
 
 describe('calculatePreliminaryCircuit', () => {
