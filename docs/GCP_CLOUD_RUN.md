@@ -122,7 +122,7 @@ El piloto usará la URL HTTPS `run.app`. `southamerica-west1` no admite la asign
 
 - Build multi-stage: Node 24 para compilar Vite; imagen Nginx no-root para servir `dist/`.
 - Escuchar en `0.0.0.0:$PORT`; en local se usará `8080`.
-- `GET /healthz` debe responder `200` sin dependencias externas.
+- `GET /health` debe responder `200` sin dependencias externas.
 - Las rutas de la SPA devuelven `index.html`; archivos inexistentes con extensión deben devolver `404`.
 - `index.html`, `manifest.webmanifest` y el service worker deben revalidarse.
 - Assets con hash deben responder con caché larga e `immutable`.

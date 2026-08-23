@@ -53,7 +53,7 @@ export default defineConfig({
         globPatterns: ['**/*.{css,html,ico,js,json,png,svg,woff2}'],
         globIgnores: ['**/icons/pwa-*.png', '**/icons/maskable-*.png'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/healthz(?:\/|$)/],
+        navigateFallbackDenylist: [/^\/health(?:\/|$)/],
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.mode === 'navigate',

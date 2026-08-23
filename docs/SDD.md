@@ -798,7 +798,7 @@ Los checks obligatorios cubrirán:
 - Pruebas de componentes críticas.
 - E2E mobile-first, persistencia, exportación y flujo offline.
 - Build de producción y validación del manifest y service worker.
-- Build local del contenedor y prueba de `/healthz`.
+- Build local del contenedor y prueba de `/health`.
 - Revisión de dependencias y vulnerabilidades altas o críticas.
 - Escaneo para impedir credenciales y archivos generados de autenticación.
 
@@ -835,7 +835,7 @@ Contrato inicial de infraestructura:
 | Instancias mínimas | `0` |
 | Instancias máximas | `3`, ajustable después de medir |
 
-El contenedor web se construirá en dos etapas: Node compilará Vite y una imagen mínima servirá `dist/`. Debe escuchar en `0.0.0.0:$PORT`, exponer `/healthz`, devolver `index.html` como fallback solo para rutas de la SPA y terminar correctamente ante `SIGTERM`.
+El contenedor web se construirá en dos etapas: Node compilará Vite y una imagen mínima servirá `dist/`. Debe escuchar en `0.0.0.0:$PORT`, exponer `/health`, devolver `index.html` como fallback solo para rutas de la SPA y terminar correctamente ante `SIGTERM`.
 
 Los assets tendrán nombres con hash. `index.html`, el manifest y el service worker tendrán caché corta o revalidación obligatoria; JS/CSS inmutables tendrán caché larga con `immutable`.
 
@@ -863,7 +863,7 @@ Los workflows se crearán junto con el scaffold ejecutable. Los commits exclusiv
 | `ui-tests` | Componentes, accesibilidad y estados de error | Sí |
 | `pwa-e2e` | Mobile/desktop, IndexedDB, offline, service worker, PDF y JSON | Sí |
 | `build` | Vite production, presupuesto de bundle, manifest e integridad | Sí |
-| `container` | Docker build, usuario no root, `/healthz`, CSP y headers de caché | Sí |
+| `container` | Docker build, usuario no root, `/health`, CSP y headers de caché | Sí |
 | `supply-chain` | Lockfile, dependencias, secretos, SBOM y vulnerabilidades | Sí para severidad alta/crítica sin excepción aceptada |
 | `ci-gate` | Agrega todos los resultados anteriores | Sí; único check requerido por branch protection |
 
@@ -888,7 +888,7 @@ La etiqueta semántica y cualquier alias humano serán referencias convenientes,
 3. Construir una sola imagen mediante Docker Buildx en GitHub Actions y publicarla en Artifact Registry.
 4. Resolver y guardar su digest.
 5. Desplegar el digest a `calculadora-electrica-staging` con 100% del tráfico de ese servicio.
-6. Ejecutar smoke tests de `/`, `/healthz`, manifest, service worker, assets con hash, CSP y fallback SPA.
+6. Ejecutar smoke tests de `/`, `/health`, manifest, service worker, assets con hash, CSP y fallback SPA.
 7. Ejecutar E2E contra la URL HTTPS real, incluido un flujo offline después de la primera carga.
 8. Publicar `release-metadata.json` solo si todas las pruebas pasan.
 
@@ -912,7 +912,7 @@ No se hará rollout porcentual entre dos revisiones del frontend estático. Peti
 - Ante un fallo antes de la promoción, la revisión candidata se mantiene en 0% y se retira su tag.
 - Ante un smoke test fallido después de promover, el workflow devuelve 100% del tráfico a la revisión registrada al inicio.
 - El rollback manual selecciona una revisión o digest conocido; nunca recompila código histórico.
-- Después de revertir se repiten `/healthz`, manifest, service worker y el flujo crítico de cálculo.
+- Después de revertir se repiten `/health`, manifest, service worker y el flujo crítico de cálculo.
 - La acción genera evidencia y abre o enlaza un incidente; no elimina la revisión fallida automáticamente.
 
 Un rollback de servidor no revierte una PWA ya cacheada ni una migración local. Por ello, CI probará compatibilidad de IndexedDB entre `N-1`, `N` y el camino de recuperación. Las migraciones destructivas requerirán respaldo exportable y un plan propio antes de producción.

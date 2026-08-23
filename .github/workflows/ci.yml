@@ -166,7 +166,7 @@ jobs:
             calculadora-electrica-pro:ci
 
           for attempt in {1..30}; do
-            if curl --fail --silent --show-error http://127.0.0.1:8080/healthz >/dev/null; then
+            if curl --fail --silent --show-error http://127.0.0.1:8080/health >/dev/null; then
               break
             fi
             if [ "$attempt" -eq 30 ]; then
@@ -177,7 +177,7 @@ jobs:
           done
 
           test "$(docker exec calculadora-electrica-pro-ci id -u)" != "0"
-          test "$(curl --fail --silent http://127.0.0.1:8080/healthz)" = "ok"
+          test "$(curl --fail --silent http://127.0.0.1:8080/health)" = "ok"
           curl --fail --silent http://127.0.0.1:8080/ruta-spa-de-prueba | grep -q '<div id="root">'
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/archivo-inexistente.js)" = "404"
           curl --fail --silent --head http://127.0.0.1:8080/manifest.webmanifest | tr -d '\r' | grep -qi '^cache-control:.*no-cache'

@@ -138,7 +138,7 @@ Trabajo:
 - Incorporar manifest, iconos iniciales y service worker de app shell.
 - Añadir página offline y flujo explícito de actualización.
 - Crear Dockerfile multi-stage y servidor estático no root.
-- Configurar `/healthz`, fallback SPA, CSP y caché correcta.
+- Configurar `/health`, fallback SPA, CSP y caché correcta.
 - Crear de forma idempotente:
   - Artifact Registry `calculadora-electrica`.
   - Cuenta runtime `calculadora-electrica-web` sin roles de proyecto.

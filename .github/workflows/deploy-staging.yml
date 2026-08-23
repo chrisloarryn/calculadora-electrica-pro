@@ -182,7 +182,7 @@ jobs:
           test -n "$SERVICE_URL"
 
           for attempt in {1..30}; do
-            status_code="$(curl --silent --output /dev/null --write-out '%{http_code}' "$SERVICE_URL/healthz")"
+            status_code="$(curl --silent --output /dev/null --write-out '%{http_code}' "$SERVICE_URL/health")"
             if test "$status_code" = "200"; then
               break
             fi
@@ -193,7 +193,7 @@ jobs:
             sleep 2
           done
 
-          test "$(curl --fail --silent "$SERVICE_URL/healthz")" = "ok"
+          test "$(curl --fail --silent "$SERVICE_URL/health")" = "ok"
           curl --fail --silent "$SERVICE_URL/" | grep -q '<div id="root">'
           curl --fail --silent --head "$SERVICE_URL/manifest.webmanifest" | tr -d '\r' | grep -qi '^cache-control:.*no-cache'
 
