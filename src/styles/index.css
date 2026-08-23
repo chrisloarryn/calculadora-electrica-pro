@@ -435,6 +435,13 @@ input:focus-visible {
   box-shadow: var(--shadow);
 }
 
+.project-card--active {
+  border-color: rgba(23, 105, 224, 0.38);
+  box-shadow:
+    0 0 0 1px rgba(23, 105, 224, 0.16),
+    var(--shadow);
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -462,6 +469,13 @@ input:focus-visible {
   color: var(--ink-soft);
   font-size: 0.68rem;
   font-weight: 700;
+  text-transform: uppercase;
+}
+
+.project-card__active {
+  color: var(--blue);
+  font-size: 0.68rem;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -542,6 +556,28 @@ input:focus-visible {
   color: var(--warning);
   font-size: 0.69rem;
   font-weight: 700;
+}
+
+.editor-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(23, 105, 224, 0.18);
+  border-radius: 16px;
+  color: var(--navy);
+  background: linear-gradient(180deg, rgba(234, 242, 255, 0.9), #fff);
+}
+
+.editor-banner strong {
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.editor-banner span {
+  color: var(--ink-soft);
+  font-size: 0.92rem;
 }
 
 .primary-navigation--bottom {

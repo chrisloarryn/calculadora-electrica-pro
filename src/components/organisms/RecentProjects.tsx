@@ -8,6 +8,7 @@ interface RecentProjectsProps {
   onOpen: (project: ProjectSummary) => void;
   onDelete?: (id: string) => void;
   onDuplicate?: (project: ProjectSummary) => void;
+  activeProjectId?: string | null;
 }
 
 export function RecentProjects({
@@ -16,6 +17,7 @@ export function RecentProjects({
   onOpen,
   onDelete,
   onDuplicate,
+  activeProjectId,
 }: RecentProjectsProps) {
   return (
     <section aria-labelledby="recent-projects-title" className="projects-section">
@@ -37,6 +39,7 @@ export function RecentProjects({
             project={project}
             {...(onDelete ? { onDelete } : {})}
             {...(onDuplicate ? { onDuplicate } : {})}
+            isActive={activeProjectId === project.id}
           />
         ))}
       </div>

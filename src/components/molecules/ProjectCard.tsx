@@ -17,15 +17,17 @@ interface ProjectCardProps {
   onOpen: (project: ProjectSummary) => void;
   onDelete?: (id: string) => void;
   onDuplicate?: (project: ProjectSummary) => void;
+  isActive?: boolean;
 }
 
-export function ProjectCard({ project, onOpen, onDelete, onDuplicate }: ProjectCardProps) {
+export function ProjectCard({ project, onOpen, onDelete, onDuplicate, isActive }: ProjectCardProps) {
   const progressLabel = `${String(project.progress)}% de la configuración de ejemplo completada`;
 
   return (
-    <article className="project-card">
+    <article className={`project-card${isActive ? ' project-card--active' : ''}`} data-active={isActive ? 'true' : undefined}>
       <div className="project-card__topline">
         <StatusBadge label="Borrador" />
+        {isActive ? <span className="project-card__active">Activo</span> : null}
         {project.isDemo ? <span className="project-card__demo">Proyecto demo</span> : null}
       </div>
 

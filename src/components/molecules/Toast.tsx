@@ -11,7 +11,7 @@ export function Toast({ projectName, onClose }: ToastProps) {
       <Icon name="check" size={18} />
       <span>
         <strong>{projectName}</strong>
-        El editor se habilitará en el próximo hito.
+        Editor activo para este proyecto.
       </span>
       <button aria-label="Cerrar aviso" onClick={onClose} type="button">
         <Icon name="close" size={18} />
