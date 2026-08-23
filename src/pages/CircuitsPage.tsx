@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { calculatePreliminaryCircuit } from '../calculation/circuit';
 import { chileLoadCatalog } from '../domain/loadCatalog';
+import { countryProfiles } from '../standards/countryProfiles';
 import { Button } from '../components/atoms/Button';
 import { Eyebrow } from '../components/atoms/Eyebrow';
 import { Icon } from '../components/atoms/Icon';
@@ -65,7 +66,17 @@ export function CircuitsPage() {
 
   function createNewCircuit() {
     if (!activeProjectId) return;
-    const circuit = createCircuit();
+    const preferences = loadUiPreferences();
+    const circuit = createCircuit({
+      standardProfile: countryProfiles[preferences.country].id,
+      voltageV: preferences.defaultVoltageV,
+      installationMethod: preferences.defaultInstallationMethod,
+      insulationType: preferences.defaultInsulationType,
+      ambientTemperatureC: preferences.defaultAmbientTemperatureC,
+      groupedCircuits: preferences.defaultGroupedCircuits,
+      maximumVoltageDropPercent: preferences.defaultMaximumVoltageDropPercent,
+      loadDuty: preferences.defaultLoadDuty,
+    });
     const next = [circuit, ...circuits];
     persist(next);
     setActiveCircuitId(circuit.id);
@@ -289,6 +300,10 @@ export function CircuitsPage() {
                     onChange={(event) => updateCircuit({ name: event.target.value })}
                     placeholder="Ej. iluminación planta baja"
                   />
+                </label>
+                <label>
+                  Perfil
+                  <input disabled value={activeCircuit.standardProfile} />
                 </label>
                 <label>
                   Sistema

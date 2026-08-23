@@ -5,6 +5,7 @@ import type { CircuitSummary } from '../lib/circuits';
 const circuit: CircuitSummary = {
   id: 'c1',
   name: 'Iluminacion',
+  standardProfile: 'CL-SEC-RIC',
   system: 'single-phase',
   voltageV: 220,
   demandFactor: 1,

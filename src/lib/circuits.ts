@@ -14,6 +14,7 @@ export interface CircuitLoad {
 export interface CircuitSummary {
   id: string;
   name: string;
+  standardProfile: 'CL-SEC-RIC' | 'AR-BASE';
   system: 'single-phase' | 'three-phase';
   voltageV: number;
   demandFactor: number;
@@ -30,6 +31,17 @@ export interface CircuitSummary {
   maximumVoltageDropPercent: number;
   loads: CircuitLoad[];
   status: 'borrador' | 'listo';
+}
+
+export interface CircuitDefaults {
+  standardProfile: CircuitSummary['standardProfile'];
+  voltageV: number;
+  installationMethod: CircuitSummary['installationMethod'];
+  insulationType: CircuitSummary['insulationType'];
+  ambientTemperatureC: number;
+  groupedCircuits: number;
+  maximumVoltageDropPercent: number;
+  loadDuty: LoadDuty;
 }
 
 const CIRCUITS_PREFIX = 'cep-circuits:';
@@ -53,6 +65,7 @@ function isCircuitLoad(value: unknown): value is CircuitLoad {
     isRecord(value) &&
     typeof value.id === 'string' &&
     typeof value.name === 'string' &&
+    (value.standardProfile === 'CL-SEC-RIC' || value.standardProfile === 'AR-BASE') &&
     isLoadType(value.type) &&
     typeof value.powerW === 'number' &&
     typeof value.quantity === 'number' &&
@@ -136,6 +149,7 @@ function migrateCircuit(value: unknown): CircuitSummary | null {
   return {
     id: value.id,
     name: value.name,
+    standardProfile: value.standardProfile === 'AR-BASE' ? 'AR-BASE' : 'CL-SEC-RIC',
     system: value.system === 'three-phase' ? 'three-phase' : 'single-phase',
     voltageV: typeof value.voltageV === 'number' ? value.voltageV : 220,
     demandFactor: typeof value.demandFactor === 'number' ? value.demandFactor : 1,
@@ -172,24 +186,25 @@ function migrateCircuit(value: unknown): CircuitSummary | null {
   };
 }
 
-export function createCircuit(): CircuitSummary {
+export function createCircuit(defaults?: Partial<CircuitDefaults>): CircuitSummary {
   return {
     id: `circuit-${String(Date.now())}`,
     name: '',
+    standardProfile: defaults?.standardProfile ?? 'CL-SEC-RIC',
     system: 'single-phase',
-    voltageV: 220,
+    voltageV: defaults?.voltageV ?? 220,
     demandFactor: 1,
     demandRule: 'manual',
-    loadDuty: 'standard',
+    loadDuty: defaults?.loadDuty ?? 'standard',
     lengthM: 12,
     breakerCurve: 'auto',
     advanced: false,
     conductorMaterial: 'copper',
-    installationMethod: 'C',
-    insulationType: 'PVC',
-    ambientTemperatureC: 30,
-    groupedCircuits: 1,
-    maximumVoltageDropPercent: 3,
+    installationMethod: defaults?.installationMethod ?? 'C',
+    insulationType: defaults?.insulationType ?? 'PVC',
+    ambientTemperatureC: defaults?.ambientTemperatureC ?? 30,
+    groupedCircuits: defaults?.groupedCircuits ?? 1,
+    maximumVoltageDropPercent: defaults?.maximumVoltageDropPercent ?? 3,
     loads: [],
     status: 'borrador',
   };

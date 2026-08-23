@@ -6,6 +6,8 @@ export interface LoadCatalogItem {
   powerW: number;
   powerFactor: number;
   efficiency: number;
+  ratedCurrentA?: number;
+  notes?: string;
 }
 
 export const chileLoadCatalog: LoadCatalogItem[] = [
@@ -16,4 +18,21 @@ export const chileLoadCatalog: LoadCatalogItem[] = [
   { name: 'Lavadora', type: 'motor', powerW: 800, powerFactor: 0.85, efficiency: 0.85 },
   { name: 'Refrigerador', type: 'motor', powerW: 300, powerFactor: 0.8, efficiency: 0.8 },
   { name: 'Computador', type: 'electronic', powerW: 250, powerFactor: 0.95, efficiency: 1 },
+  {
+    name: 'Wall connector (definir potencia de placa)',
+    type: 'electronic',
+    powerW: 0,
+    powerFactor: 1,
+    efficiency: 1,
+    notes: 'Ingresa la potencia y corriente nominal indicadas por el fabricante.',
+  },
+  {
+    name: 'Cortina eléctrica RF 230 V',
+    type: 'motor',
+    powerW: 200,
+    powerFactor: 1,
+    efficiency: 1,
+    ratedCurrentA: 0.87,
+    notes: 'Receptor RF integrado; confirmar datos de placa antes de calcular.',
+  },
 ];

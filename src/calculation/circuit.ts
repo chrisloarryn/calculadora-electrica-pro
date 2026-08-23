@@ -23,6 +23,23 @@ export function calculatePreliminaryCircuit(circuit: CircuitSummary): Preliminar
   const warnings = [
     'Resultado preliminar: requiere validación profesional y perfil normativo aprobado.',
   ];
+  if (circuit.standardProfile !== 'CL-SEC-RIC') {
+    return {
+      status: 'blocked',
+      installedPowerW: 0,
+      demandedPowerW: 0,
+      designCurrentA: 0,
+      suggestedBreakerA: null,
+      suggestedConductorMm2: null,
+      estimatedVoltageDropPercent: null,
+      warnings: [
+        'El perfil Argentina está registrado para compatibilidad, pero todavía no contiene reglas verificadas de cálculo.',
+      ],
+      appliedRules: [],
+      suggestedCurve: 'C',
+      suggestedRcd: null,
+    };
+  }
   const loads = circuit.loads.filter(
     (load) => load.name.trim() && load.powerW > 0 && load.quantity > 0,
   );
