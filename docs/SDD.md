@@ -14,13 +14,21 @@ A continuación se listan los pasos del SDD y su estado. Cada paso realizado se 
 |---|---:|---|
 | Contenedor: exponer `/health`, CSP y headers de caché, usuario no-root | Completado | nginx.conf + Dockerfile; commit 846bcd0 (nginx template & CMD) y d7aad04 (estado SDD). (/health definido en nginx.conf, HEALTHCHECK en Dockerfile)
 | Dockerfile: HEALTHCHECK y env PORT | Completado | Dockerfile updated; commit 846bcd0
-| Nginx: escuchar en $PORT y servir SPA con fallback | Completado | nginx.conf template + envsubst CMD; commit 846bcd0
+| Nginx: escuchar en $PORT y servir SPA con fallback | Completado | nginx.conf template + sed-based templating CMD; commit 805f2b5
+| Build local del contenedor y prueba de `/health` | Completado | Imagen local `calculadora-local:testing` construida y verificada localmente. `/health` respondió 200 con body `ok`. Validación realizada 2026-08-23 (local); no run ID (local artifact). See local logs in CI/runner if needed.
 | CI: smoke tests para `/`, `/health`, manifest, sw y headers | Completado | workflows reference `/health`; earlier run 32623404018 re-run and new CI run 32624162197 triggered. See .github/workflows/*
 | Artifact Registry integration in pipeline | Completado | Deploy workflow bootstraps Artifact Registry if missing; staging deploy run 32624000099 created/used repository in project `gcp-course-2024`. See .github/workflows/deploy-staging.yml (lines that call `gcloud artifacts repositories create`).
 | Cloud Run staging: deploy y hacer público | Completado | Deploy staging run 32624000099 succeeded; service URL: https://calculadora-electrica-staging-ey2qb5zbbq-tl.a.run.app
 | Cuenta de servicio runtime y permisos | Completado | Service account used by workflow and deployment; permissions applied (per deploy logs)
 | PWA assets, manifest, service worker | Completado | dist/ contains manifest.webmanifest, sw.js, registerSW.js; CI checks them
-| Producción: gating y deploy | Pendiente | Defined in SDD; requires Artifact Registry & manual gating
+| Producción: gating y deploy | Pendiente | Defined in SDD; requires Artifact Registry & manual gating |
+
+
+### Producción
+- Workflow de despliegue a producción añadido: .github/workflows/deploy-production.yml (commit 3f66bd5).  
+- El workflow puede ejecutarse manualmente (workflow_dispatch) o tras un `Deploy staging` exitoso. La job `deploy` declara `environment: production` para aprovechar protecciones de entorno (requerir revisión/aprobación) si están configuradas en GitHub.  
+- Estado: Pendiente ejecución. Para marcar la fase de 'Despliegue a producción' como completada es necesario ejecutar el workflow y registrar el run ID como evidencia.
+
 
 Notas:
 - Los pasos completados se pushearon a la rama main y se activó CI (run 32624162197). No se asume creación de recursos GCP que no se verificaron desde CI (Artifact Registry, repos). Para marcar Artifact Registry y Producción como completados se necesita verificar o crear esos recursos en el proyecto GCP `gcp-course-2024`.
