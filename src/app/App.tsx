@@ -6,12 +6,9 @@ import { ComingSoonPage } from '../pages/ComingSoonPage';
 import { ProjectsPage } from '../pages/ProjectsPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { ReportsPage } from '../pages/ReportsPage';
-import { loadUiPreferences } from '../lib/preferences';
 
 export function App() {
-  const [activeSection, setActiveSection] = useState<Section>(() =>
-    loadUiPreferences().rememberActiveProject ? 'circuits' : 'projects',
-  );
+  const [activeSection, setActiveSection] = useState<Section>('projects');
 
   let content;
 
