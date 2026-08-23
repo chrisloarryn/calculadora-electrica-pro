@@ -1,6 +1,6 @@
 # Calculadora Eléctrica Pro
 
-Aplicación móvil-first para dimensionar circuitos eléctricos, protecciones y conductores, comprobar la caída de tensión y generar documentación profesional.
+Aplicación web mobile-first, instalable como PWA y funcional sin conexión, para dimensionar circuitos eléctricos, protecciones y conductores, comprobar la caída de tensión y generar documentación profesional.
 
 Estado: definición de producto y arquitectura. Todavía no debe usarse para ejecutar ni certificar instalaciones reales.
 
@@ -28,6 +28,8 @@ Reducir el tiempo necesario para pasar de una lista de cargas a una propuesta t�
 
 ## Documentación
 
+- [Software Design Document (SDD)](docs/SDD.md)
+- [Despliegue en GCP y Cloud Run](docs/GCP_CLOUD_RUN.md)
 - [Análisis de las referencias](docs/ANALISIS_REFERENCIA.md)
 - [Plan de implementación](docs/PLAN_IMPLEMENTACION.md)
 - [Especificación inicial del motor de cálculo](docs/MOTOR_DE_CALCULO.md)
@@ -49,4 +51,3 @@ Reducir el tiempo necesario para pasar de una lista de cargas a una propuesta t�
 ## Próxima decisión
 
 Antes de programar el motor se debe confirmar el mercado normativo inicial. El plan asume Chile como primer perfil; la arquitectura permitirá incorporar otros países sin alterar el núcleo de la aplicación.
-

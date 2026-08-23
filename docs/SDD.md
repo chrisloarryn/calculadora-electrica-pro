@@ -1,0 +1,989 @@
+# Software Design Document — Calculadora Eléctrica Pro
+
+| Campo | Valor |
+|---|---|
+| Estado | Propuesto para implementación |
+| Versión | 0.1.0 |
+| Fecha | 23 de agosto de 2026 |
+| Producto | Calculadora Eléctrica Pro |
+| Plataforma | Aplicación web mobile-first instalable como PWA |
+| Mercado normativo inicial | Chile, sujeto a validación profesional |
+| Proyecto GCP | `gcp-course-2024` |
+| Hosting inicial | Cloud Run, región `southamerica-west1` |
+
+## 1. Propósito
+
+Este documento define cómo construir una calculadora eléctrica web con paridad funcional respecto de las referencias analizadas, manteniendo una implementación, identidad visual y código propios.
+
+El producto permitirá convertir cargas eléctricas en circuitos dimensionados y documentados. La experiencia debe ser suficientemente rápida para uso en terreno, pero cada resultado deberá conservar la trazabilidad necesaria para que pueda ser revisado por un profesional.
+
+Este SDD es la fuente principal para las decisiones de arquitectura. Los documentos de análisis y del motor de cálculo aportan contexto y detalle normativo:
+
+- [Análisis de las referencias](ANALISIS_REFERENCIA.md)
+- [Especificación inicial del motor](MOTOR_DE_CALCULO.md)
+- [Plan de implementación](PLAN_IMPLEMENTACION.md)
+
+## 2. Resumen de la solución
+
+La solución será una aplicación web responsive diseñada primero para teléfonos. Podrá abrirse desde una URL o instalarse como PWA, tendrá apariencia de aplicación independiente y seguirá operando sin conexión después de su primera carga completa.
+
+El MVP no requerirá una API. El motor de cálculo, las tablas normativas, el almacenamiento de proyectos y la generación de informes funcionarán en el dispositivo del usuario. Cloud Run se utilizará inicialmente como host del contenedor que entrega los archivos estáticos de la PWA; no recibirá ni almacenará proyectos eléctricos.
+
+```mermaid
+flowchart LR
+    GH[GitHub] --> CI[GitHub Actions]
+    CI --> CB[Cloud Build]
+    CB --> AR[Artifact Registry]
+    AR --> CR[Cloud Run web]
+    CR --> UI
+    U[Usuario] --> UI[Web mobile-first]
+    UI --> APP[Servicios de aplicación]
+    APP --> CALC[Motor de cálculo puro]
+    CALC --> RULES[Perfil normativo versionado]
+    APP --> DB[(IndexedDB)]
+    APP --> REPORT[PDF + SVG unifilar]
+    SW[Service worker] --> UI
+    SW --> CALC
+    SW --> RULES
+    SW --> REPORT
+```
+
+## 3. Objetivos
+
+### 3.1 Objetivos del producto
+
+- Reducir el tiempo entre el levantamiento de cargas y un cálculo documentado.
+- Permitir proyectos con varios circuitos y varias cargas por circuito.
+- Recomendar conductor, protección termomagnética y diferencial.
+- Comprobar y explicar la caída de tensión.
+- Generar un informe PDF profesional y un diagrama unifilar básico.
+- Funcionar desde el navegador, instalada como PWA o sin conexión.
+- Mantener reproducibilidad mediante perfiles normativos e informes versionados.
+
+### 3.2 Objetivos de ingeniería
+
+- Separar por completo cálculo, normativa, interfaz, persistencia e informes.
+- Mantener el motor determinista y ejecutable sin navegador.
+- Impedir que una actualización normativa altere silenciosamente informes anteriores.
+- Probar las reglas críticas mediante casos dorados revisados por un profesional.
+- Evitar un backend hasta que sincronización, cuentas o cobros lo justifiquen.
+
+### 3.3 No objetivos del MVP
+
+- No sustituir la revisión, medición, firma o declaración de un instalador autorizado.
+- No certificar legalmente una instalación.
+- No calcular cortocircuito o selectividad completa sin parámetros de red.
+- No diseñar en detalle puesta a tierra.
+- No cubrir ambientes explosivos, autogeneración, baterías ni electromovilidad.
+- No incluir colaboración en tiempo real, pagos ni precios dinámicos.
+- No distribuir inicialmente una aplicación nativa mediante tiendas móviles.
+
+## 4. Paridad funcional con la referencia
+
+### 4.1 Capacidades que se replicarán
+
+| Área | Comportamiento observado | Implementación propia requerida |
+|---|---|---|
+| Circuitos | Pestañas con nombre y resultado resumido | Selector móvil con crear, renombrar, duplicar y eliminar |
+| Configuración | Voltaje, demanda, seguridad, curva y distancia | Modo básico más modo avanzado con condiciones reales de instalación |
+| Cargas | Varias filas con artefacto, potencia y cantidad | Catálogo tipado más entrada personalizada |
+| Resultados | Corriente, breaker, cable, caída y diferencial | Resultado explicable con reglas, supuestos y advertencias |
+| Actualización | Recálculo inmediato al editar | Pipeline determinista con debounce solo para la interfaz |
+| PDF | Resumen de varios circuitos y unifilar | Instantánea inmutable usada por pantalla y PDF |
+| Uso en teléfono | Flujo vertical de tarjetas | Diseño mobile-first con controles táctiles accesibles |
+
+### 4.2 Mejoras obligatorias respecto de la referencia
+
+- No inferir el tipo de carga desde un nombre de texto libre.
+- No tratar mm² y AWG como equivalencias exactas.
+- No recomendar una curva de breaker sin conocer el tipo de carga.
+- No recomendar un diferencial universal para todos los casos.
+- No ocultar los factores de corrección aplicados.
+- No mostrar un resultado como válido cuando faltan datos críticos.
+- No mezclar reglas normativas con componentes visuales.
+
+### 4.3 Elementos que no se copiarán
+
+- Nombre comercial, logotipo, textos de venta o identidad de la referencia.
+- Código, recursos gráficos, iconos, estilos o plantillas de informe.
+- Flujos de compra, precios o limitaciones de la versión demo.
+
+La paridad será funcional, no una reproducción visual ni de marca.
+
+## 5. Actores y casos de uso
+
+### 5.1 Actores
+
+| Actor | Necesidad principal |
+|---|---|
+| Técnico o instalador | Dimensionar y documentar circuitos rápidamente |
+| Revisor técnico | Auditar entradas, reglas, supuestos y resultados |
+| Propietario del proyecto | Recibir un informe comprensible |
+| Administrador futuro | Publicar perfiles normativos y catálogos validados |
+
+### 5.2 Flujo principal
+
+1. El usuario abre o instala la PWA.
+2. Crea un proyecto y selecciona el perfil normativo.
+3. Define el suministro general.
+4. Crea un circuito desde cero o desde una plantilla.
+5. Registra condiciones de instalación y cargas.
+6. El sistema valida y calcula en el dispositivo.
+7. El usuario revisa resultados, explicaciones y advertencias.
+8. Repite el proceso para los demás circuitos.
+9. Revisa el resumen del tablero.
+10. Crea una instantánea y exporta el PDF.
+
+### 5.3 Estados del cálculo
+
+```mermaid
+stateDiagram-v2
+    [*] --> Incompleto
+    Incompleto --> Calculando: datos mínimos completos
+    Calculando --> Valido: reglas satisfechas
+    Calculando --> Advertencia: resultado utilizable con reservas
+    Calculando --> Bloqueado: regla crítica incumplida
+    Valido --> Calculando: cambia una entrada
+    Advertencia --> Calculando: cambia una entrada
+    Bloqueado --> Calculando: se corrige una entrada
+```
+
+## 6. Requisitos funcionales
+
+| ID | Requisito | Prioridad |
+|---|---|---|
+| FR-001 | Crear, renombrar, duplicar, archivar y eliminar proyectos | P0 |
+| FR-002 | Crear, ordenar, duplicar, renombrar y eliminar circuitos | P0 |
+| FR-003 | Agregar, editar, duplicar y eliminar cargas | P0 |
+| FR-004 | Manejar potencia, cantidad, tipo, factor de potencia y rendimiento | P0 |
+| FR-005 | Ofrecer configuración básica y avanzada por circuito | P0 |
+| FR-006 | Calcular potencia instalada, potencia demandada y corriente de diseño | P0 |
+| FR-007 | Seleccionar conductor por sección mínima, capacidad corregida y caída | P0 |
+| FR-008 | Recomendar breaker, curva y polos cuando haya datos suficientes | P0 |
+| FR-009 | Recomendar diferencial con sensibilidad, clase y corriente nominal | P0 |
+| FR-010 | Mostrar fórmula, reglas, supuestos y advertencias del cálculo | P0 |
+| FR-011 | Guardar automáticamente todos los cambios en el dispositivo | P0 |
+| FR-012 | Reabrir y editar proyectos sin conexión | P0 |
+| FR-013 | Generar PDF y diagrama unifilar sin conexión | P0 |
+| FR-014 | Instalar la aplicación como PWA en navegadores compatibles | P0 |
+| FR-015 | Exportar e importar un proyecto como JSON versionado | P1 |
+| FR-016 | Ofrecer plantillas para iluminación, enchufes, motores y alto consumo | P1 |
+| FR-017 | Comparar alternativas de conductor y protección | P1 |
+| FR-018 | Recalcular un proyecto con una versión normativa nueva sin sobrescribir el anterior | P1 |
+
+## 7. Requisitos no funcionales
+
+| ID | Requisito | Objetivo verificable |
+|---|---|---|
+| NFR-001 | Plataforma | Una sola aplicación web para teléfono, tablet y escritorio |
+| NFR-002 | PWA | Manifest, service worker, iconos y modo standalone válidos |
+| NFR-003 | Offline | Flujo completo disponible después de la primera carga |
+| NFR-004 | Rendimiento | Recálculo de un circuito típico en menos de 100 ms en el dispositivo de prueba |
+| NFR-005 | Determinismo | Entradas y versión iguales producen exactamente la misma salida |
+| NFR-006 | Reproducibilidad | Todo informe incluye versiones de esquema, motor y perfil |
+| NFR-007 | Accesibilidad | Objetivo WCAG 2.2 AA para flujos críticos |
+| NFR-008 | Privacidad | Ningún proyecto sale del dispositivo en el MVP |
+| NFR-009 | Resiliencia | Recuperación segura ante cierre, actualización o cuota insuficiente |
+| NFR-010 | Mantenibilidad | Cobertura completa de reglas críticas y dependencias unidireccionales |
+| NFR-011 | Compatibilidad | Navegadores evergreen con degradación clara si no permiten instalación |
+| NFR-012 | Localización | Unidades y textos desacoplados para añadir países e idiomas |
+
+## 8. Decisiones de arquitectura
+
+### ADR-001 — Aplicación web PWA, no aplicación nativa
+
+Se utilizará una base de código web responsive. La instalación se ofrecerá mediante capacidades PWA del navegador. Esto mantiene acceso por URL, actualización centralizada y operación offline sin mantener proyectos nativos separados.
+
+### ADR-002 — MVP local-first y sin backend
+
+Los proyectos residirán en IndexedDB. El cálculo y los informes se ejecutarán localmente. El sistema no dependerá de autenticación ni disponibilidad de red.
+
+### ADR-003 — Motor TypeScript puro
+
+El motor aceptará objetos validados y devolverá objetos de resultado. No accederá a React, DOM, IndexedDB, reloj del sistema, red ni variables globales.
+
+### ADR-004 — Normativa como datos versionados
+
+Las tablas y reglas específicas de cada jurisdicción vivirán en perfiles versionados. El motor general no contendrá condicionales dispersos por país.
+
+### ADR-005 — PDF desde una instantánea inmutable
+
+La pantalla y el PDF consumirán el mismo `CalculationSnapshot`. El PDF nunca recalculará por su cuenta.
+
+### ADR-006 — Actualizaciones explícitas
+
+Una nueva versión de la PWA no modificará el proyecto mientras esté abierto. El usuario recibirá una indicación para recargar; los informes históricos conservarán su versión original.
+
+### ADR-007 — Cloud Run como hosting inicial
+
+Se reutilizará el proyecto GCP `gcp-course-2024`, pero se crearán recursos separados para esta aplicación. El servicio web será `calculadora-electrica-pro` en `southamerica-west1`, público y sin autenticación. Su contenedor servirá la SPA/PWA por el puerto indicado en `PORT`.
+
+Las imágenes nuevas se almacenarán en Artifact Registry. No se copiará la ruta `gcr.io` del repositorio de referencia porque Container Registry dejó de aceptar escrituras; se conservarán el proyecto, la región y el patrón GitHub Actions → Cloud Build → Cloud Run.
+
+### ADR-008 — API opcional en Go 1.27
+
+No se añadirá una API hasta que exista una capacidad que no pueda resolverse de forma local, como cuentas, sincronización, licencias, colaboración o integración entre sistemas. Si se necesita, se implementará como un servicio Cloud Run independiente en Go 1.27, actualizado a la última revisión de seguridad compatible de esa línea.
+
+La interfaz pública para la PWA será HTTP/JSON por defecto. gRPC nativo se utilizará para tráfico servicio a servicio cuando reduzca latencia o simplifique contratos. Desde navegador solo se adoptará gRPC-Web o un protocolo compatible después de validar soporte, caché offline, tamaño del cliente y operación; no se agregará un proxy únicamente por preferencia tecnológica.
+
+## 9. Tecnologías propuestas
+
+| Capa | Tecnología o criterio |
+|---|---|
+| Lenguaje | TypeScript con modo estricto |
+| UI | React |
+| Build | Vite |
+| PWA | Service worker basado en Workbox mediante integración de Vite |
+| Rutas | Router del lado cliente con fallback del host |
+| Formularios | Formularios tipados y validación por esquema |
+| Validación | Zod o equivalente compatible con TypeScript |
+| Estado de edición | Store ligera con acciones explícitas |
+| Persistencia | IndexedDB con capa de repositorios y migraciones |
+| PDF | Renderizador de PDF cliente con fuentes embebidas |
+| Diagramas | SVG propio a partir del modelo de circuitos |
+| Pruebas unitarias | Vitest o equivalente |
+| Pruebas E2E | Playwright |
+| CI | GitHub Actions |
+| Registro de imágenes | Artifact Registry |
+| Hosting | Cloud Run público con contenedor estático, fallback SPA y headers de caché |
+| API futura | Go 1.27 en un servicio Cloud Run separado; HTTP/JSON y gRPC según consumidor |
+
+Las librerías concretas se fijarán en el primer ADR de implementación. Ninguna librería podrá convertirse en dependencia del dominio.
+
+## 10. Arquitectura lógica
+
+```text
+src/
+├── app/
+│   ├── bootstrap/
+│   ├── routing/
+│   └── providers/
+├── features/
+│   ├── projects/
+│   ├── circuits/
+│   ├── loads/
+│   ├── calculation-review/
+│   └── reports/
+├── domain/
+│   ├── project/
+│   ├── circuit/
+│   ├── load/
+│   ├── result/
+│   └── units/
+├── calculation/
+│   ├── current/
+│   ├── ampacity/
+│   ├── voltage-drop/
+│   ├── breaker/
+│   ├── rcd/
+│   └── calculate-circuit.ts
+├── standards/
+│   ├── contracts/
+│   └── cl-sec-ric/
+│       ├── manifest.ts
+│       ├── conductor-tables.ts
+│       ├── demand-rules.ts
+│       └── protection-rules.ts
+├── storage/
+│   ├── indexed-db/
+│   ├── migrations/
+│   └── repositories/
+├── reports/
+│   ├── snapshots/
+│   ├── pdf/
+│   └── single-line/
+├── pwa/
+│   ├── manifest/
+│   ├── service-worker/
+│   └── update-coordinator/
+├── ui/
+│   ├── components/
+│   ├── tokens/
+│   └── accessibility/
+└── test/
+    ├── fixtures/
+    ├── golden-cases/
+    └── properties/
+```
+
+### 10.1 Regla de dependencias
+
+```text
+UI y features
+      ↓
+servicios de aplicación
+      ↓
+dominio + motor + contratos de perfiles
+
+storage, PWA y reports implementan puertos del servicio de aplicación.
+El dominio no depende de ninguna capa exterior.
+```
+
+## 11. Modelo de dominio
+
+### 11.1 Proyecto
+
+```ts
+interface ElectricalProject {
+  id: string;
+  schemaVersion: number;
+  name: string;
+  description?: string;
+  standardProfile: StandardProfileRef;
+  supply: SupplyConfiguration;
+  circuits: Circuit[];
+  reportSnapshots: ReportSnapshotMetadata[];
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### 11.2 Perfil normativo
+
+```ts
+interface StandardProfileRef {
+  country: "CL" | string;
+  code: "SEC_RIC" | string;
+  version: string;
+  effectiveDate: string;
+  sourceManifestHash: string;
+}
+```
+
+### 11.3 Suministro
+
+```ts
+interface SupplyConfiguration {
+  system: "single-phase" | "three-phase" | "dc";
+  nominalVoltageV: number;
+  voltageReference: "line-neutral" | "line-line" | "dc";
+  frequencyHz?: number;
+}
+```
+
+### 11.4 Circuito
+
+```ts
+interface Circuit {
+  id: string;
+  name: string;
+  category: CircuitCategory;
+  calculationMode: "basic" | "advanced";
+  supplyOverride?: SupplyConfiguration;
+  installation: InstallationConditions;
+  demand: DemandConfiguration;
+  breakerCurve: "auto" | "B" | "C" | "D" | "K" | "Z";
+  loads: ElectricalLoad[];
+  sortOrder: number;
+}
+```
+
+### 11.5 Condiciones de instalación
+
+```ts
+interface InstallationConditions {
+  oneWayLengthM: number;
+  conductorMaterial: "copper" | "aluminium";
+  conductorStandard: "metric" | "awg";
+  insulationType: string;
+  serviceTemperatureC: number;
+  installationMethod: string;
+  ambientTemperatureC: number;
+  loadedConductors: number;
+  groupedCircuits: number;
+  maximumVoltageDropPercent?: number;
+  environment: "normal" | "wet" | "outdoor" | "special";
+}
+```
+
+### 11.6 Carga
+
+```ts
+interface ElectricalLoad {
+  id: string;
+  name: string;
+  type: LoadType;
+  ratedPowerW: number;
+  quantity: number;
+  powerFactor?: number;
+  efficiency?: number;
+  duty: "intermittent" | "continuous";
+  demandFactorOverride?: number;
+  startingCurrentMultiplier?: number;
+}
+```
+
+### 11.7 Resultado
+
+```ts
+interface CircuitCalculationResult {
+  status: "valid" | "warning" | "blocked";
+  installedPowerW: number;
+  demandedPowerW: number;
+  baseCurrentA: number;
+  designCurrentA: number;
+  conductor: ConductorRecommendation;
+  breaker: BreakerRecommendation;
+  voltageDrop: VoltageDropResult;
+  rcd?: RcdRecommendation;
+  assumptions: CalculationMessage[];
+  warnings: CalculationMessage[];
+  blockingErrors: CalculationMessage[];
+  appliedRules: AppliedRule[];
+  engineVersion: string;
+  standardProfile: StandardProfileRef;
+}
+```
+
+Todos los valores persistidos usarán unidades explícitas en el nombre. Los objetos del motor no aceptarán cadenas con unidades mezcladas.
+
+## 12. Pipeline de cálculo
+
+```mermaid
+flowchart TD
+    A[Entrada de proyecto y circuito] --> B[Validar esquema y rangos]
+    B -->|Error crítico| X[Resultado bloqueado]
+    B --> C[Normalizar unidades y defaults visibles]
+    C --> D[Resolver demanda y simultaneidad]
+    D --> E[Calcular corriente base]
+    E --> F[Aplicar régimen y factores normativos]
+    F --> G[Enumerar conductores candidatos]
+    G --> H[Corregir capacidad por método, temperatura y agrupamiento]
+    H --> I[Comprobar caída de tensión]
+    I --> J[Resolver breaker compatible]
+    J --> K[Resolver diferencial]
+    K --> L[Generar explicación, reglas y advertencias]
+    L --> M[Persistir borrador y mostrar resultado]
+```
+
+### 12.1 Invariantes
+
+- La corriente de diseño no puede ser negativa ni no finita.
+- La protección no puede quedar por debajo de la corriente de diseño.
+- La protección no puede superar la capacidad corregida del conductor.
+- Un conductor no puede aprobar si excede la caída máxima aplicable.
+- La corriente nominal del diferencial debe ser compatible con las protecciones asociadas.
+- Un caso sin datos suficientes debe quedar `blocked` o `warning`, nunca `valid`.
+- Una selección automática debe incluir la regla que la justificó.
+
+### 12.2 Redondeos
+
+- El motor conservará precisión interna sin redondear pasos intermedios.
+- El redondeo será una responsabilidad de presentación.
+- La selección de calibres usará el valor interno y escogerá el siguiente calibre permitido.
+- El snapshot guardará valores internos y valores presentados.
+
+### 12.3 Equivalencias mm²/AWG
+
+- Los catálogos métrico y AWG serán independientes.
+- La selección ocurrirá dentro del catálogo elegido.
+- Una equivalencia visual será aproximada y nunca decidirá la capacidad admisible.
+
+## 13. Perfil normativo Chile
+
+El primer perfil se denominará provisionalmente `CL-SEC-RIC`.
+
+### 13.1 Contenido del perfil
+
+- Manifiesto con versión, fecha efectiva, fuentes y hash.
+- Secciones mínimas por uso.
+- Tablas de capacidad de corriente.
+- Métodos de instalación admitidos.
+- Factores de corrección por temperatura y agrupamiento.
+- Factores de demanda aplicables.
+- Límites de caída según tipo de circuito o instalación.
+- Calibres normalizados de protecciones.
+- Reglas de curva, polos y diferenciales.
+- Mensajes explicativos y referencias normativas.
+
+### 13.2 Gobernanza
+
+- Toda regla debe indicar documento, sección y fecha de consulta.
+- Los cambios normativos crean una versión nueva; nunca modifican una versión publicada.
+- Un perfil no pasa a producción sin revisión técnica documentada.
+- Los casos dorados se asocian a una versión concreta del perfil.
+
+### 13.3 Estado inicial
+
+El perfil Chile es una hipótesis de producto hasta que un instalador autorizado revise las reglas codificadas. La aplicación mostrará una advertencia de prototipo mientras esa validación no exista.
+
+## 14. Diseño de experiencia
+
+### 14.1 Navegación principal
+
+```text
+Proyectos
+└── Proyecto
+    ├── Resumen
+    ├── Circuitos
+    │   └── Editor de circuito
+    ├── Tablero / unifilar
+    └── Informes
+```
+
+### 14.2 Editor de circuito en teléfono
+
+Orden vertical recomendado:
+
+1. Encabezado con nombre, estado y acciones.
+2. Selector horizontal de circuitos.
+3. Tarjeta de configuración básica.
+4. Enlace a modo avanzado.
+5. Lista de cargas en tarjetas o tabla responsive.
+6. Tarjeta de resultado fija o de acceso rápido.
+7. Explicaciones y advertencias.
+
+### 14.3 Desktop
+
+En pantallas amplias, configuración y cargas ocuparán la columna principal; el resultado permanecerá visible en una columna lateral. El orden semántico debe seguir siendo válido para lectores de pantalla.
+
+### 14.4 Estados visuales
+
+| Estado | Tratamiento |
+|---|---|
+| Incompleto | Campos pendientes y explicación de lo necesario |
+| Calculando | Indicador discreto, sin bloquear edición |
+| Válido | Resultado con confirmación y reglas disponibles |
+| Advertencia | Resultado visible con advertencia priorizada |
+| Bloqueado | Sin recomendación final; acción de corrección explícita |
+| Offline | Indicador persistente sin degradar funciones locales |
+| Actualización disponible | Solicitud de recarga cuando sea seguro |
+
+### 14.5 Accesibilidad
+
+- Objetivos táctiles de tamaño adecuado.
+- Formularios con `label`, descripción y error asociados.
+- Navegación completa por teclado.
+- No depender solo del color para estados.
+- Anunciar cambios importantes de resultado sin interrumpir cada pulsación.
+- Tablas con alternativa legible en móvil.
+- PDF con orden de lectura y textos, no una imagen plana.
+
+## 15. Diseño PWA y operación offline
+
+### 15.1 Experiencia de instalación
+
+- La aplicación se abre desde una URL HTTPS.
+- Se ofrece una ayuda de instalación contextual cuando el navegador lo permita.
+- El manifest define nombre, nombre corto, iconos, colores, `start_url` y `display: standalone`.
+- La aplicación conserva la misma funcionalidad instalada o abierta en una pestaña.
+
+### 15.2 Estrategia de caché
+
+| Recurso | Estrategia |
+|---|---|
+| HTML de entrada | Network-first con fallback cacheado |
+| JS/CSS con hash | Precache, cache-first |
+| Iconos y fuentes | Precache, cache-first |
+| Perfiles normativos incluidos | Precache e integridad por versión |
+| Recursos no críticos | Stale-while-revalidate |
+| Proyectos | IndexedDB; nunca Cache Storage |
+
+### 15.3 Capacidades offline del MVP
+
+Después de la primera carga satisfactoria, sin red se podrá:
+
+- Abrir la aplicación.
+- Crear, editar, duplicar y eliminar proyectos y circuitos.
+- Ejecutar todos los cálculos incluidos.
+- Consultar explicaciones y fuentes empaquetadas.
+- Generar y descargar PDF y JSON.
+- Reabrir proyectos guardados.
+
+### 15.4 Actualizaciones
+
+1. El service worker descarga la nueva versión en segundo plano.
+2. La versión activa continúa atendiendo la sesión actual.
+3. La interfaz informa que existe una actualización.
+4. El usuario recarga cuando no haya una edición sin persistir.
+5. Se ejecutan migraciones de almacenamiento antes de abrir proyectos.
+6. Si la migración falla, se conserva una copia exportable y se detiene la apertura.
+
+## 16. Persistencia local
+
+### 16.1 Almacenes IndexedDB
+
+| Store | Clave | Contenido |
+|---|---|---|
+| `projects` | `project.id` | Proyecto editable |
+| `snapshots` | `snapshot.id` | Entrada y resultado inmutables |
+| `settings` | nombre | Preferencias no sensibles |
+| `catalogs` | catálogo + versión | Plantillas y artefactos personalizados |
+| `migrationLog` | versión | Resultado de migraciones |
+
+### 16.2 Autosave
+
+- Cada acción de dominio actualiza el estado en memoria.
+- Se persiste después de un debounce corto.
+- Cambiar de vista o pasar a segundo plano fuerza un guardado.
+- La interfaz muestra `guardado`, `guardando` o `error de guardado`.
+- Un error de cuota no se oculta; se ofrece exportación JSON.
+
+### 16.3 Migraciones
+
+- Todo proyecto incluye `schemaVersion`.
+- Las migraciones son incrementales, idempotentes y probadas con fixtures.
+- Antes de una migración destructiva se crea una copia temporal recuperable.
+
+## 17. Informes y diagrama unifilar
+
+### 17.1 Creación de snapshot
+
+```ts
+interface CalculationSnapshot {
+  id: string;
+  projectId: string;
+  createdAt: string;
+  schemaVersion: number;
+  engineVersion: string;
+  standardProfile: StandardProfileRef;
+  normalizedInput: ElectricalProject;
+  projectResult: ProjectCalculationResult;
+  inputHash: string;
+  resultHash: string;
+}
+```
+
+### 17.2 Contenido mínimo del PDF
+
+1. Portada y datos básicos del proyecto.
+2. Estado del informe: prototipo, revisado o final.
+3. Suministro y perfil normativo.
+4. Resumen de circuitos.
+5. Detalle de cargas y resultados por circuito.
+6. Factores, supuestos y advertencias.
+7. Diagrama unifilar.
+8. Lista estimada de materiales.
+9. Versiones, fecha, identificador y hashes.
+10. Descargo de responsabilidad.
+
+### 17.3 Unifilar
+
+El SVG se generará desde el modelo, no desde coordenadas guardadas. El MVP representará:
+
+- Suministro.
+- Protección general si fue ingresada.
+- Barras o tablero.
+- Diferenciales.
+- Protecciones de circuitos.
+- Conductores y cargas resumidas.
+
+El diagrama no afirmará coordinación, poder de corte o puesta a tierra cuando esos cálculos no estén incluidos.
+
+## 18. Seguridad y privacidad
+
+### 18.1 Datos
+
+- El MVP no requiere cuenta ni datos personales.
+- Dirección, cliente y contacto serán opcionales y se guardarán solo localmente.
+- No se enviarán proyectos a analítica, logs remotos ni servicios de PDF.
+- Exportar o compartir un archivo será una acción explícita del usuario.
+
+### 18.2 Aplicación
+
+- Política CSP restrictiva.
+- Sin secretos ni claves en el bundle.
+- Ninguna variable con prefijo `VITE_` contendrá secretos; Vite las incorpora al JavaScript público.
+- La cuenta de servicio de despliegue existirá solo como `GCP_SA_KEY` en GitHub Actions Secrets.
+- El contenedor web no recibirá credenciales GCP ni tendrá acceso a datos de otros servicios.
+- Sin `eval` ni HTML no sanitizado.
+- Dependencias fijadas y auditadas.
+- Validación de archivos JSON antes de importar.
+- Escape de todo texto de usuario en pantalla, SVG y PDF.
+- Service worker limitado al scope de la aplicación.
+
+### 18.3 Riesgo técnico del dominio
+
+La principal amenaza no es un atacante, sino una recomendación eléctrica incorrecta. Se mitiga con:
+
+- Estados bloqueantes.
+- Reglas y fuentes visibles.
+- Casos dorados.
+- Revisión profesional.
+- Perfil y motor versionados.
+- Descargos claros sin presentar el software como certificador.
+
+## 19. Manejo de errores
+
+| Código | Escenario | Comportamiento |
+|---|---|---|
+| `INPUT_INVALID` | Valor fuera de rango | Campo marcado y cálculo bloqueado |
+| `UNSUPPORTED_CASE` | Tipo de instalación no cubierto | Explicación y sin recomendación |
+| `NO_VALID_CONDUCTOR` | Ninguna sección cumple | Resultado bloqueado y causa visible |
+| `PROTECTION_CONFLICT` | Breaker incompatible con conductor | Resultado bloqueado |
+| `PROFILE_MISSING` | Perfil no disponible offline | No abrir cálculo; conservar proyecto |
+| `STORAGE_QUOTA` | IndexedDB sin espacio | Mantener sesión y ofrecer exportación |
+| `MIGRATION_FAILED` | Proyecto antiguo no migra | Abrir solo lectura y permitir backup |
+| `REPORT_FAILED` | PDF no se genera | Mantener snapshot y permitir reintento |
+
+Los mensajes técnicos se registrarán localmente con identificadores; la interfaz mostrará acciones comprensibles.
+
+## 20. Estrategia de pruebas
+
+### 20.1 Pirámide
+
+| Nivel | Cobertura |
+|---|---|
+| Unitarias | Fórmulas, factores, tablas, redondeos y validadores |
+| Propiedades | Invariantes matemáticos y monotonicidad |
+| Contratos | Cada perfil contra el contrato del motor |
+| Integración | Motor + perfil + persistencia + snapshot |
+| Componentes | Formularios, estados y accesibilidad |
+| E2E | Proyecto completo, offline, instalación y PDF |
+| Revisión profesional | Casos dorados y muestras del informe |
+
+### 20.2 Propiedades obligatorias
+
+- A igualdad de condiciones, aumentar longitud no reduce la caída.
+- A igualdad de condiciones, aumentar carga no reduce corriente de diseño.
+- Reducir sección no aumenta capacidad tabulada.
+- Aplicar factores de reducción no aumenta capacidad corregida.
+- El breaker recomendado nunca supera la capacidad corregida.
+- Serializar y restaurar un proyecto no cambia su cálculo.
+- El PDF y la UI muestran valores derivados del mismo snapshot.
+
+### 20.3 Casos E2E mínimos
+
+1. Crear proyecto monofásico de cuatro circuitos como en el reel.
+2. Editar una carga y comprobar actualización de resultados.
+3. Cambiar a modo avanzado y aplicar temperatura/agrupamiento.
+4. Cerrar, reabrir y verificar persistencia.
+5. Pasar a offline y completar otro circuito.
+6. Generar PDF y JSON offline.
+7. Instalar la PWA y abrirla en modo standalone.
+8. Actualizar la aplicación con un proyecto abierto sin perder datos.
+
+### 20.4 Casos dorados
+
+Antes del piloto se requieren entre 15 y 25 casos que cubran:
+
+- Monofásico y trifásico.
+- Cargas resistivas, iluminación, motores y electrónicas.
+- Distancias cortas y largas.
+- Distintos métodos de instalación.
+- Correcciones por temperatura y agrupamiento.
+- Caída como condición gobernante.
+- Capacidad de corriente como condición gobernante.
+- Resultados válidos, con advertencia y bloqueados.
+
+## 21. Integración continua y entrega
+
+### 21.1 Pull request
+
+Cada PR deberá ejecutar:
+
+- Formato y lint.
+- Typecheck estricto.
+- Pruebas unitarias y de propiedades.
+- Casos dorados.
+- Pruebas de componentes críticas.
+- Build de producción.
+- Validación del manifest y service worker.
+- Auditoría de dependencias según política del proyecto.
+
+### 21.2 Despliegue
+
+```text
+Pull request → validaciones → build local del contenedor → revisión
+main → autenticación GCP → Cloud Build → Artifact Registry
+     → Cloud Run → smoke test HTTPS → URL publicada
+```
+
+El flujo se adaptará de `.github/workflows/deploy-movil-app-backendo-dev.yml` del repositorio `cloud-functions-scheduler`, sustituyendo el servicio y el registro de imagen. Los cambios solo se desplegarán después de aprobar las pruebas y el build.
+
+Contrato inicial de infraestructura:
+
+| Recurso | Valor |
+|---|---|
+| Proyecto | `gcp-course-2024` |
+| Región | `southamerica-west1` |
+| Servicio Cloud Run web | `calculadora-electrica-pro` |
+| Repositorio Artifact Registry | `calculadora-electrica` |
+| Imagen web | `southamerica-west1-docker.pkg.dev/gcp-course-2024/calculadora-electrica/web` |
+| Acceso | Público, `--allow-unauthenticated` |
+| Puerto | Variable `PORT` inyectada por Cloud Run; valor habitual `8080` |
+| Memoria inicial | `512Mi` |
+| CPU inicial | `1` |
+| Timeout inicial | `300s` |
+| Instancias mínimas | `0` |
+| Instancias máximas | `3`, ajustable después de medir |
+
+El contenedor web se construirá en dos etapas: Node compilará Vite y una imagen mínima servirá `dist/`. Debe escuchar en `0.0.0.0:$PORT`, exponer `/healthz`, devolver `index.html` como fallback solo para rutas de la SPA y terminar correctamente ante `SIGTERM`.
+
+Los assets tendrán nombres con hash. `index.html`, el manifest y el service worker tendrán caché corta o revalidación obligatoria; JS/CSS inmutables tendrán caché larga con `immutable`.
+
+La cuenta de servicio entregada se utilizará únicamente por GitHub Actions para construir y desplegar. Antes del primer despliegue se validarán permisos mínimos para Cloud Build, Artifact Registry, Cloud Run y uso de la identidad del servicio. En una mejora posterior se reemplazará la clave JSON por Workload Identity Federation.
+
+### 21.3 Variables y secretos
+
+Los nombres se derivan de la configuración del repositorio `cloud-functions-scheduler`, pero cada repositorio de GitHub mantiene sus propios secretos.
+
+| Nombre | Alcance | Secreto | Valor o fuente |
+|---|---|---:|---|
+| `GCP_SA_KEY` | GitHub Actions Secret | Sí | JSON de cuenta de servicio; nunca se versiona |
+| `GCP_PROJECT_ID` | GitHub Actions Secret | No sensible | `gcp-course-2024` |
+| `GCP_REGION` | GitHub Actions Secret | No sensible | `southamerica-west1` |
+| `CLOUD_RUN_SERVICE` | GitHub Actions Variable | No | `calculadora-electrica-pro` |
+| `ARTIFACT_REGISTRY_REPOSITORY` | GitHub Actions Variable | No | `calculadora-electrica` |
+| `IMAGE_NAME` | GitHub Actions Variable | No | `web` |
+| `CLOUD_RUN_MEMORY` | GitHub Actions Variable | No | `512Mi` |
+| `CLOUD_RUN_CPU` | GitHub Actions Variable | No | `1` |
+| `CLOUD_RUN_TIMEOUT` | GitHub Actions Variable | No | `300s` |
+| `PORT` | Runtime Cloud Run | No | Inyectada por la plataforma; no se configura en GitHub |
+| `VITE_APP_VERSION` | Build público | No | Tag o SHA del build |
+| `VITE_ENGINE_VERSION` | Build público | No | Versión publicada del motor |
+| `VITE_STANDARD_PROFILE_ID` | Build público | No | `CL-SEC-RIC` |
+
+`GCP_JOBS_REGION`, `RESUME_URL`, `GCP_SA_KEY_GMAIL`, `GOOGLE_APPLICATION_CREDENTIALS`, `GCP_IMAGE`, `NODE_ENV` y `SERVICE_NAME` aparecen en distintos componentes del repositorio de origen, pero no son requisitos del frontend MVP. Solo se incorporarán si una implementación futura demuestra que los necesita.
+
+El detalle operativo está en [Despliegue en GCP y Cloud Run](GCP_CLOUD_RUN.md).
+
+### 21.4 Entornos
+
+| Entorno | Uso |
+|---|---|
+| Local | Desarrollo y pruebas unitarias |
+| Preview | Revisión de cada PR |
+| Staging | Piloto y validación profesional |
+| Producción | Usuarios finales |
+
+### 21.5 API futura y gRPC
+
+Una API futura tendrá estas reglas:
+
+- Servicio separado: `calculadora-electrica-api`.
+- Runtime: Go 1.27 con binario estático y contenedor mínimo.
+- Escucha: `0.0.0.0:$PORT` y timeouts explícitos de lectura, escritura e inactividad.
+- Contratos: OpenAPI para HTTP/JSON; Protocol Buffers como fuente de verdad cuando se active gRPC.
+- gRPC nativo: preferido entre servicios en Cloud Run, con HTTP/2 extremo a extremo.
+- Navegador: HTTP/JSON por defecto; gRPC-Web solo con prueba de compatibilidad y beneficio medido.
+- Resiliencia: deadlines, cancelación propagada, límites de tamaño e idempotencia donde corresponda.
+- Rendimiento: benchmark antes de optimizar y presupuestos p95 definidos por endpoint.
+- Seguridad: autenticación, autorización y rate limiting antes de exponer operaciones con datos de usuario.
+- Compatibilidad del cálculo: los mismos casos dorados deberán aprobarse en TypeScript y Go antes de mover reglas al servidor.
+
+## 22. Observabilidad
+
+El MVP no enviará telemetría de proyectos.
+
+Se podrá incorporar en una fase posterior, con consentimiento y sin datos del proyecto:
+
+- Versión instalada.
+- Resultado de instalación PWA.
+- Errores técnicos anonimizados.
+- Tiempo de inicio y generación de PDF.
+
+Los cálculos y valores eléctricos nunca se incluirán automáticamente en telemetría.
+
+## 23. Criterios de aceptación del MVP
+
+### 23.1 Paridad funcional
+
+- Se puede reproducir el escenario de cuatro circuitos observado en la referencia.
+- Cada circuito admite múltiples cargas y cantidad por carga.
+- La pantalla muestra corriente, breaker, conductor, caída y diferencial.
+- El usuario puede crear, renombrar, duplicar y cambiar de circuito.
+- El informe incluye tabla general y unifilar.
+
+### 23.2 PWA
+
+- La aplicación es accesible mediante URL HTTPS.
+- Es instalable en al menos los navegadores objetivo que soportan instalación.
+- Abre en modo standalone desde su icono.
+- Después de la primera carga, el flujo P0 funciona sin conexión.
+- PDF, fuentes, iconos y perfil normativo están disponibles offline.
+- Una actualización no pierde ediciones ni cambia snapshots históricos.
+
+### 23.3 Cálculo y seguridad
+
+- Todos los casos dorados están aprobados.
+- Cada resultado cita las reglas y tablas aplicadas.
+- Ningún breaker válido excede la capacidad corregida del conductor.
+- La caída se compara contra el límite del perfil.
+- Datos insuficientes producen advertencia o bloqueo.
+- UI y PDF coinciden para el mismo snapshot.
+
+### 23.4 Persistencia
+
+- Un proyecto se conserva después de cerrar y reabrir.
+- Importar el JSON exportado reproduce el mismo cálculo.
+- Las migraciones de fixtures históricos son correctas.
+- Un error de almacenamiento ofrece una salida recuperable.
+
+## 24. Plan de implementación derivado
+
+### Hito 0 — Fundaciones y validación
+
+- Confirmar alcance Chile.
+- Nombrar revisor técnico.
+- Escribir ADR-001 a ADR-006.
+- Crear fixtures y primeros casos dorados.
+- Decidir catálogo métrico/AWG inicial.
+
+### Hito 1 — Esqueleto PWA
+
+- Scaffold React + TypeScript + Vite.
+- Manifest, iconos y service worker.
+- Router, layout mobile-first y tokens.
+- IndexedDB y migración inicial.
+- CI con build, typecheck y pruebas.
+
+### Hito 2 — Dominio y motor
+
+- Esquemas de proyecto, circuito y carga.
+- Perfil `CL-SEC-RIC` inicial.
+- Corriente, demanda, capacidad corregida y caída.
+- Breaker y diferencial.
+- Explicaciones y estados.
+
+### Hito 3 — Experiencia de cálculo
+
+- Proyectos y selector de circuitos.
+- Editor básico/avanzado.
+- Tabla/tarjetas de cargas.
+- Resultado en vivo.
+- Autosave y recuperación.
+
+### Hito 4 — Informes y offline completo
+
+- Snapshot inmutable.
+- PDF.
+- Unifilar SVG.
+- Exportación/importación JSON.
+- Pruebas E2E offline e instalación.
+
+### Hito 5 — Piloto
+
+- Revisión profesional.
+- Corrección de casos dorados.
+- Pruebas en dispositivos objetivo.
+- Staging y canal de feedback.
+- Decisión de salida a producción.
+
+## 25. Preguntas abiertas
+
+Estas decisiones no impiden crear el esqueleto, pero deben resolverse antes de cerrar el motor o publicar:
+
+1. ¿Chile será definitivamente el primer país?
+2. ¿Qué tipos de instalación y licencia profesional cubrirá el MVP?
+3. ¿Qué tensiones y sistemas aparecerán en modo básico?
+4. ¿Qué tablas exactas del RIC pueden incorporarse y cómo se documentará su revisión?
+5. ¿Quién aprobará los casos dorados?
+6. ¿El PDF llevará marca comercial, firma o datos del técnico?
+7. ¿La aplicación será gratuita, pagada o freemium?
+8. ¿Cuándo se necesitarán cuentas y sincronización?
+9. ¿Qué navegadores y dispositivos compondrán la matriz oficial?
+10. ¿Qué nombre y sistema visual propios utilizará el producto?
+
+## 26. Definición de listo para comenzar a programar
+
+La implementación puede comenzar cuando:
+
+- Este SDD sea aceptado como línea base.
+- Se confirme que el producto es web mobile-first instalable como PWA.
+- Se confirme Chile o se reemplace el perfil inicial.
+- Se asigne un revisor técnico.
+- Existan al menos cinco casos dorados iniciales.
+- Las decisiones abiertas que afecten al modelo del motor tengan responsable y fecha.
+
+La interfaz y el esqueleto PWA pueden desarrollarse en paralelo con la validación normativa, pero ninguna recomendación eléctrica deberá presentarse como lista para producción antes de aprobar el perfil y los casos dorados.
