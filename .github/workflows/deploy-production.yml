@@ -1,0 +1,211 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy staging"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloud-run-production
+  cancel-in-progress: true
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ secrets.GCP_REGION }}
+  ARTIFACT_REGISTRY_REPOSITORY: ${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}
+  CLOUD_RUN_SERVICE: ${{ vars.CLOUD_RUN_PRODUCTION_SERVICE }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+  RUNTIME_SERVICE_ACCOUNT_NAME: calculadora-electrica-web
+
+jobs:
+  prepare:
+    name: Select deployable revision
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      deployable: ${{ steps.changes.outputs.deployable }}
+      sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - name: Resolve source revision
+        id: source
+        env:
+          WORKFLOW_RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_sha="${WORKFLOW_RUN_SHA:-$DISPATCH_SHA}"
+          test -n "$source_sha"
+          echo "sha=$source_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Check out revision history
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.source.outputs.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Detect deployable changes
+        id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if test "$EVENT_NAME" = 'workflow_dispatch'; then
+            echo 'deployable=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if git rev-parse "$SOURCE_SHA^1" >/dev/null 2>&1; then
+            changed_files="$(git diff --name-only "$SOURCE_SHA^1" "$SOURCE_SHA")"
+          else
+            changed_files="$(git ls-tree --recursive --name-only "$SOURCE_SHA")"
+          fi
+
+          if printf '%s
+' "$changed_files" | grep -Ev '^(docs/|.*\.md$)' | grep -q .; then
+            echo 'deployable=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'deployable=false' >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    name: Build, publish and deploy to production
+    needs: prepare
+    if: needs.prepare.outputs.deployable == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - name: Check out verified revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Configure preinstalled Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          skip_install: true
+
+      - name: Verify Google Cloud CLI
+        shell: bash
+        run: gcloud --version
+
+      - name: Bootstrap production resources
+        env:
+          RUNTIME_SERVICE_ACCOUNT: ${{ env.RUNTIME_SERVICE_ACCOUNT_NAME }}@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! gcloud artifacts repositories describe "$ARTIFACT_REGISTRY_REPOSITORY" \
+            --location "$GCP_REGION" \
+            --project "$GCP_PROJECT_ID" >/dev/null 2>&1; then
+            gcloud artifacts repositories create "$ARTIFACT_REGISTRY_REPOSITORY" \
+              --repository-format docker \
+              --location "$GCP_REGION" \
+              --description "Calculadora Electrica Pro container images" \
+              --project "$GCP_PROJECT_ID" \
+              --quiet
+          fi
+
+          if ! gcloud iam service-accounts describe "$RUNTIME_SERVICE_ACCOUNT" \
+            --project "$GCP_PROJECT_ID" >/dev/null 2>&1; then
+            gcloud iam service-accounts create "$RUNTIME_SERVICE_ACCOUNT_NAME" \
+              --display-name "Calculadora Electrica web runtime" \
+              --description "Runtime sin permisos de proyecto para el frontend estatico" \
+              --project "$GCP_PROJECT_ID" \
+              --quiet
+          fi
+
+          gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and publish immutable image
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          provenance: mode=max
+          sbom: true
+          tags: |
+            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.sha }}
+          cache-from: type=gha,scope=production
+          cache-to: type=gha,mode=max,scope=production
+
+      - name: Deploy immutable digest to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          service: ${{ env.CLOUD_RUN_SERVICE }}
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPOSITORY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          flags: >-
+            --no-invoker-iam-check
+            --port=8080
+            --cpu=${{ vars.CLOUD_RUN_CPU }}
+            --memory=${{ vars.CLOUD_RUN_MEMORY }}
+            --min=${{ vars.CLOUD_RUN_MIN_INSTANCES }}
+            --max=${{ vars.CLOUD_RUN_PRODUCTION_MAX_INSTANCES }}
+            --timeout=${{ vars.CLOUD_RUN_TIMEOUT }}
+            --service-account=${{ env.RUNTIME_SERVICE_ACCOUNT_NAME }}@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Smoke test production
+        env:
+          SERVICE_URL: ${{ steps.deploy.outputs.url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SERVICE_URL"
+
+          for attempt in {1..30}; do
+            status_code="$(curl --silent --output /dev/null --write-out '%{http_code}' "$SERVICE_URL/health")"
+            if test "$status_code" = "200"; then
+              break
+            fi
+            if test "$attempt" = "30"; then
+              echo "Cloud Run health check did not become ready; last HTTP status: $status_code" >&2
+              exit 1
+            fi
+            sleep 2
+          done
+
+          test "$(curl --fail --silent "$SERVICE_URL/health")" = "ok"
+          curl --fail --silent "$SERVICE_URL/" | grep -q '<div id="root">'
+          curl --fail --silent --head "$SERVICE_URL/manifest.webmanifest" | tr -d '\r' | grep -qi '^cache-control:.*no-cache'
+
+      - name: Publish deployment summary
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          SERVICE_URL: ${{ steps.deploy.outputs.url }}
+          SOURCE_SHA: ${{ needs.prepare.outputs.sha }}
+        shell: bash
+        run: |
+          {
+            echo '## Production desplegado'
+            echo
+            echo "- URL: $SERVICE_URL"
+            echo "- Commit: \`$SOURCE_SHA\`"
+            echo "- Digest: \`$IMAGE_DIGEST\`"
+          } >> "$GITHUB_STEP_SUMMARY"
