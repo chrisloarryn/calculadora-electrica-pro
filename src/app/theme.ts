@@ -46,16 +46,16 @@ export const theme = createTheme({
       },
       styleOverrides: {
         root: ({ theme }) => ({
+          '&.MuiButton-containedPrimary': {
+            '&:hover': {
+              backgroundColor: theme.palette.primary.dark,
+            },
+            backgroundColor: theme.palette.primary.main,
+          },
           borderRadius: theme.shape.borderRadius,
           minHeight: 48,
           textTransform: 'none',
         }),
-        containedPrimary: {
-          '&:hover': {
-            backgroundColor: '#0f52b8',
-          },
-          backgroundColor: '#1769e0',
-        },
       },
     },
     MuiAppBar: {

@@ -48,7 +48,7 @@ export function Navigation({ active, onChange, variant }: NavigationProps) {
               </ListItemIcon>
               <ListItemText
                 primary={item.label}
-                slotProps={{ primary: { fontSize: 13, fontWeight: 700 } }}
+                slotProps={{ primary: { sx: { fontSize: 13, fontWeight: 700 } } }}
               />
             </ListItemButton>
           ))}
