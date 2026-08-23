@@ -569,6 +569,9 @@ export function CircuitsPage() {
                         {clSecRicProfile.calibres?.map((calibre) => (
                           <option key={String(calibre.mm2)} value={String(calibre.mm2)}>
                             {String(calibre.mm2)} mm² · máx. perfil {String(calibre.i_max)} A
+                            {calibre.mm2 === result.suggestedConductorMm2
+                              ? ' · Recomendada'
+                              : ''}
                           </option>
                         ))}
                       </select>
