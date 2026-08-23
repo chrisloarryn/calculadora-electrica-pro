@@ -77,7 +77,7 @@ Una persona puede ejecutar los frentes secuencialmente. Con más capacidad, Plat
 | R2 | PWA shell desplegada a staging | R1 | HTTPS, manifest, health y smoke tests verdes |
 | R3 | Dominio y perfil Chile versionado | R0 | Esquemas y tablas con fuente y revisión inicial |
 | R4 | Motor determinista validado | R3 | Casos dorados e invariantes aprobados |
-| R5 | Flujo mobile-first completo | R1, R4 | Caso de cuatro circuitos guardado y reabierto |
+| R5 | ✅ Completado | R1, R4 | Caso de cuatro circuitos guardado y reabierto. Evidencia: commit `f613377`; CI runs: 32624162197 (build), staging deploy 32624000099; validación local: imagen `calculadora-local:testing`, `/health` respondió 200. |
 | R6 | Offline e informes completos | R5 | Flujo P0, PDF, SVG y JSON funcionan sin red |
 | R7 | Release candidate endurecida | R2, R6 | Seguridad, accesibilidad, performance y rollback aprobados |
 | R8 | Piloto y producción | R7 | Revisión profesional y checklist de salida firmados |
