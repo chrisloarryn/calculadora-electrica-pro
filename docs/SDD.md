@@ -5,6 +5,18 @@
 | Estado | Propuesto para implementación |
 | Versión | 0.5.0 |
 | Fecha | 23 de agosto de 2026 |
+| Implementación | Parcial — ver la sección 'Estado de implementación' abajo | 
+
+## Estado de implementación
+- Contenedor: `/health` endpoint, `nginx.conf` y `Dockerfile` HEALTHCHECK implementados. (Completado 2026-08-23)
+- CI/CD: Workflows actualizados para usar `/health`; verificaciones de smoke test, manifest y service worker presentes. (Completado)
+- PWA: `manifest.webmanifest`, `sw.js`/`service-worker.js` y `registerSW.js` incluidos en `dist/`. (Completado)
+- Cloud Run staging: Despliegue exitoso (workflow run 32624000099). Servicio público accesible. (Completado)
+- Cuenta de servicio runtime: creada y permisos aplicados según despliegue. (Completado)
+- Artifact Registry: repositorio `calculadora-electrica` referenciado por el pipeline; creación/verificación final pendiente si no existe en el proyecto GCP. (Pendiente)
+- Producción: despliegue y gating definidos en SDD; por ahora solo staging habilitado. (Pendiente)
+
+
 | Producto | Calculadora Eléctrica Pro |
 | Plataforma | Aplicación web mobile-first instalable como PWA |
 | Mercado normativo inicial | Chile, sujeto a validación profesional |
