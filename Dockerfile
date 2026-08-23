@@ -18,8 +18,10 @@ ENV PORT 8080
 # No runtime package install (avoid installing packages in runtime image)
 # Use sed at container start to replace ${PORT} placeholder in the nginx template
 
-# Copy nginx template and serve built SPA
+# Copy nginx template and render runtime config at build time
 COPY nginx.conf /etc/nginx/conf.d/default.conf.template
+RUN sed 's/\${PORT}/8080/g' /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf \
+  && rm /etc/nginx/conf.d/default.conf.template
 COPY --from=build --chown=101:101 /app/dist/ /usr/share/nginx/html/
 
 EXPOSE 8080
@@ -28,7 +30,7 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1
 
-# Replace PORT placeholder with sed and run nginx in foreground
-CMD ["/bin/sh","-c","sed \"s/\\${PORT}/$PORT/g\" /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]
+# Run nginx in foreground
+CMD ["nginx","-g","daemon off;"]
 
 USER 101:101
