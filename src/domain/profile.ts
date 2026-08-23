@@ -24,6 +24,11 @@ export interface Profile {
   calibres?: ProfileCalibre[];
   differentials?: ProfileDifferential[];
   breakerCalibres?: number[];
+  voltageDropPolicy?: {
+    branchCircuitMaxPercent: number;
+    totalInstallationMaxPercent: number;
+    note: string;
+  };
   loadDutyRules?: Record<string, ProfileLoadDutyRule>;
   installationMethods?: string[];
   insulationTypes?: string[];

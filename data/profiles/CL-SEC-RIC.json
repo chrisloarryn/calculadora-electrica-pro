@@ -24,6 +24,11 @@
     }
   ],
   "breakerCalibres": [6, 10, 16, 20, 25, 32, 40, 50, 63],
+  "voltageDropPolicy": {
+    "branchCircuitMaxPercent": 3,
+    "totalInstallationMaxPercent": 5,
+    "note": "Referencia RIC N°03: circuito terminal hasta 3% y trayecto total de la instalación hasta 5%; verificar el documento vigente y el tramo completo."
+  },
   "loadDutyRules": {
     "standard": { "currentMultiplier": 1, "suggestedCurve": "B" },
     "continuous": { "currentMultiplier": 1.25, "suggestedCurve": "B" },
@@ -35,7 +40,9 @@
     { "mm2": 1.5, "i_max": 10 },
     { "mm2": 2.5, "i_max": 20 },
     { "mm2": 4, "i_max": 25 },
-    { "mm2": 6, "i_max": 32 }
+    { "mm2": 6, "i_max": 40 },
+    { "mm2": 10, "i_max": 43 },
+    { "mm2": 16, "i_max": 59 }
   ],
   "differentials": [
     { "sensibilidad_mA": 30, "i_n": 25, "class": "A" },

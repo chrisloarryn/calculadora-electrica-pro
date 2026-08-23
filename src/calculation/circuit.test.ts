@@ -46,4 +46,17 @@ describe('calculatePreliminaryCircuit', () => {
     expect(result.suggestedBreakerA).toBe(6);
     expect(result.warnings).not.toHaveLength(0);
   });
+
+  it('recalcula la caída con un conductor seleccionado manualmente', () => {
+    const automatic = calculatePreliminaryCircuit(circuit);
+    const manual = calculatePreliminaryCircuit({ ...circuit, selectedConductorMm2: 6 });
+
+    expect(manual.evaluatedConductorMm2).toBe(6);
+    expect(manual.suggestedConductorMm2).toBe(automatic.suggestedConductorMm2);
+    expect(manual.estimatedVoltageDropPercent!).toBeLessThan(
+      automatic.estimatedVoltageDropPercent!,
+    );
+    expect(manual.isVoltageDropCompliant).toBe(true);
+    expect(manual.maximumVoltageDropPercent).toBe(3);
+  });
 });

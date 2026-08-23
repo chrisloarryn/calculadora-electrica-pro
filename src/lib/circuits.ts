@@ -29,6 +29,7 @@ export interface CircuitSummary {
   ambientTemperatureC: number;
   groupedCircuits: number;
   maximumVoltageDropPercent: number;
+  selectedConductorMm2?: number | undefined;
   loads: CircuitLoad[];
   status: 'borrador' | 'listo';
 }
@@ -181,6 +182,8 @@ function migrateCircuit(value: unknown): CircuitSummary | null {
     groupedCircuits: typeof value.groupedCircuits === 'number' ? value.groupedCircuits : 1,
     maximumVoltageDropPercent:
       typeof value.maximumVoltageDropPercent === 'number' ? value.maximumVoltageDropPercent : 3,
+    selectedConductorMm2:
+      typeof value.selectedConductorMm2 === 'number' ? value.selectedConductorMm2 : undefined,
     loads,
     status: value.status === 'listo' ? 'listo' : 'borrador',
   };

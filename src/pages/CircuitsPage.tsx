@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { calculatePreliminaryCircuit } from '../calculation/circuit';
 import { chileLoadCatalog } from '../domain/loadCatalog';
+import { clSecRicProfile } from '../standards/clSecRic';
 import { countryProfiles } from '../standards/countryProfiles';
 import { Button } from '../components/atoms/Button';
 import { Eyebrow } from '../components/atoms/Eyebrow';
@@ -105,7 +106,12 @@ export function CircuitsPage() {
 
   function applyCatalogItem(loadId: string, catalogName: string) {
     const item = chileLoadCatalog.find((candidate) => candidate.name === catalogName);
-    if (item) updateLoad(loadId, item);
+    if (!item || !activeCircuit) return;
+    updateCircuit({
+      loads: activeCircuit.loads.map((load) => (load.id === loadId ? { ...load, ...item } : load)),
+      ...(item.nominalVoltageV ? { voltageV: item.nominalVoltageV } : {}),
+      ...(item.phases === 3 ? { system: 'three-phase' } : {}),
+    });
   }
 
   function removeLoad(loadId: string) {
@@ -543,14 +549,49 @@ export function CircuitsPage() {
                       Breaker sugerido<strong>{result.suggestedBreakerA ?? 'Sin calibre'} A</strong>
                     </span>
                     <span>
-                      Conductor sugerido
+                      Conductor automático
                       <strong>{result.suggestedConductorMm2 ?? 'Sin sección'} mm²</strong>
                     </span>
+                    <label>
+                      Conductor a evaluar
+                      <select
+                        aria-label="Conductor a evaluar"
+                        value={activeCircuit.selectedConductorMm2 ?? ''}
+                        onChange={(event) =>
+                          updateCircuit({
+                            selectedConductorMm2: event.target.value
+                              ? Number(event.target.value)
+                              : undefined,
+                          })
+                        }
+                      >
+                        <option value="">Automático</option>
+                        {clSecRicProfile.calibres?.map((calibre) => (
+                          <option key={String(calibre.mm2)} value={String(calibre.mm2)}>
+                            {String(calibre.mm2)} mm² · máx. perfil {String(calibre.i_max)} A
+                          </option>
+                        ))}
+                      </select>
+                      <strong>
+                        {result.evaluatedConductorMm2
+                          ? `${String(result.evaluatedConductorMm2)} mm²`
+                          : 'Sin sección'}
+                      </strong>
+                      <small>Capacidad de perfil: {result.evaluatedConductorCapacityA ?? 'sin dato'} A</small>
+                      {result.conductorReference ? <small>Ref.: {result.conductorReference.nearestAwg} ({result.conductorReference.awgAreaMm2} mm²)</small> : null}
+                    </label>
                     <span>
                       Caída estimada
                       <strong>
                         {result.estimatedVoltageDropPercent?.toFixed(2) ?? 'Sin dato'} %
                       </strong>
+                      <small>Límite RIC circuito terminal: {String(result.maximumVoltageDropPercent)} %</small>
+                      <small>{result.isVoltageDropCompliant ? 'Cumple el límite preliminar' : 'No cumple el límite preliminar'}</small>
+                    </span>
+                    <span>
+                      Límite normativo RIC
+                      <strong>3 % circuito terminal · 5 % total</strong>
+                      <small>El 5 % corresponde al trayecto completo de la instalación, no solo este circuito.</small>
                     </span>
                     <span>
                       Curva sugerida
@@ -582,6 +623,7 @@ export function CircuitsPage() {
                       ))}
                     </ul>
                   </details>
+                  {result.conductorReference ? <p>La referencia AWG es informativa. La selección y capacidad admisible se mantienen en mm² según el perfil del país y condiciones de instalación.</p> : null}
                 </>
               ) : (
                 <p>Selecciona un circuito para calcular.</p>

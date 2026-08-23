@@ -8,6 +8,9 @@ export interface LoadCatalogItem {
   efficiency: number;
   ratedCurrentA?: number;
   notes?: string;
+  nominalVoltageV?: number;
+  phases?: 1 | 3;
+  source?: string;
 }
 
 export const chileLoadCatalog: LoadCatalogItem[] = [
@@ -25,6 +28,17 @@ export const chileLoadCatalog: LoadCatalogItem[] = [
     powerFactor: 1,
     efficiency: 1,
     notes: 'Ingresa la potencia y corriente nominal indicadas por el fabricante.',
+  },
+  {
+    name: 'SAVE Tesla 22 kW · Tipo 2',
+    type: 'electronic',
+    powerW: 22000,
+    powerFactor: 1,
+    efficiency: 1,
+    nominalVoltageV: 380,
+    phases: 3,
+    source: 'SEC Resolución Exenta Electrónica N°24215, 03-04-2024; RIC N°15.',
+    notes: 'Autorización de producto para instalaciones específicas. Verificar compatibilidad del caso, datos de placa y requisitos RIC N°15.',
   },
   {
     name: 'Cortina eléctrica RF 230 V',
