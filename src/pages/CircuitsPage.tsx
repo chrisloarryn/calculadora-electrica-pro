@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../components/atoms/Button';
 import { Eyebrow } from '../components/atoms/Eyebrow';
 import { Icon } from '../components/atoms/Icon';
-import { loadActiveProjectId, loadUiPreferences } from '../lib/preferences';
+import { loadActiveProjectId, loadUiPreferences, saveActiveProjectId } from '../lib/preferences';
 import { getAllProjects } from '../lib/storage';
 import { loadCircuits, saveCircuits, type CircuitSummary } from '../lib/circuits';
 import type { ProjectSummary } from '../components/molecules/ProjectCard';
@@ -46,6 +46,16 @@ export function CircuitsPage() {
     () => projects.find((project) => project.id === activeProjectId) ?? null,
     [activeProjectId, projects],
   );
+
+  function selectProject(projectId: string) {
+    const nextProjectId = projectId || null;
+    setActiveProjectId(nextProjectId);
+    setCircuits(nextProjectId ? loadCircuits(nextProjectId) : []);
+
+    if (loadUiPreferences().rememberActiveProject) {
+      saveActiveProjectId(nextProjectId);
+    }
+  }
 
   function addCircuit() {
     if (!activeProjectId || !draft.name.trim()) {
@@ -111,10 +121,27 @@ export function CircuitsPage() {
           </p>
         </div>
 
+        <label className="circuits-project-selector">
+          Proyecto activo
+          <select
+            aria-label="Proyecto activo"
+            value={activeProjectId ?? ''}
+            onChange={(event) => selectProject(event.target.value)}
+          >
+            <option value="">Selecciona un proyecto</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <div className="circuits-form">
           <label>
             Nombre
             <input
+              disabled={!activeProject}
               value={draft.name}
               onChange={(event) =>
                 setDraft((current) => ({ ...current, name: event.target.value }))
@@ -125,6 +152,7 @@ export function CircuitsPage() {
           <label>
             Tipo de carga
             <input
+              disabled={!activeProject}
               value={draft.loadType}
               onChange={(event) =>
                 setDraft((current) => ({ ...current, loadType: event.target.value }))
@@ -135,6 +163,7 @@ export function CircuitsPage() {
           <label>
             Potencia W
             <input
+              disabled={!activeProject}
               min={0}
               type="number"
               value={draft.powerW}
@@ -146,6 +175,7 @@ export function CircuitsPage() {
           <label>
             Longitud m
             <input
+              disabled={!activeProject}
               min={0}
               type="number"
               value={draft.lengthM}
@@ -154,7 +184,13 @@ export function CircuitsPage() {
               }
             />
           </label>
-          <Button icon="plus" onClick={addCircuit} type="button" fullWidth>
+          <Button
+            disabled={!activeProject || !draft.name.trim()}
+            icon="plus"
+            onClick={addCircuit}
+            type="button"
+            fullWidth
+          >
             Agregar circuito
           </Button>
         </div>

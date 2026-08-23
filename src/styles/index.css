@@ -808,7 +808,8 @@ input:focus-visible {
 }
 
 .circuits-form label,
-.circuit-card label {
+.circuit-card label,
+.circuits-project-selector {
   display: grid;
   gap: 6px;
   color: var(--ink);
@@ -817,7 +818,8 @@ input:focus-visible {
 }
 
 .circuits-form input,
-.circuit-card input {
+.circuit-card input,
+.circuits-project-selector select {
   width: 100%;
   min-height: 44px;
   padding: 0 12px;
@@ -825,6 +827,12 @@ input:focus-visible {
   border-radius: 12px;
   color: var(--ink);
   background: #fbfcfe;
+}
+
+.circuits-form input:disabled {
+  cursor: not-allowed;
+  color: var(--ink-soft);
+  background: #f0f3f7;
 }
 
 .circuits-list {
