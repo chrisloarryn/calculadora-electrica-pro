@@ -10,6 +10,11 @@ import { RecentProjects } from '../components/organisms/RecentProjects';
 import { PrototypeNotice } from '../components/molecules/PrototypeNotice';
 import { Toast } from '../components/molecules/Toast';
 import type { ProjectSummary } from '../components/molecules/ProjectCard';
+import {
+  loadActiveProjectId,
+  loadUiPreferences,
+  saveActiveProjectId,
+} from '../lib/preferences';
 
 const initialProjects: ProjectSummary[] = [
   {
@@ -27,7 +32,15 @@ export function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectSummary[]>(initialProjects);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [openedProject, setOpenedProject] = useState<ProjectSummary | null>(null);
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(initialProjects[0]?.id ?? null);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(() => {
+    const preferences = loadUiPreferences();
+    if (!preferences.rememberActiveProject) {
+      return initialProjects[0]?.id ?? null;
+    }
+
+    return loadActiveProjectId() ?? initialProjects[0]?.id ?? null;
+  });
+  const [showPrototypeNotice] = useState<boolean>(() => loadUiPreferences().showPrototypeNotice);
   const circuitCount = projects.reduce((total, project) => total + project.circuits, 0);
   const saveTimer = useRef<number | null>(null);
 
@@ -38,7 +51,9 @@ export function ProjectsPage() {
         if (!mounted) return;
         if (stored.length > 0) {
           setProjects(stored);
-          setActiveProjectId((current) => current ?? stored[0]?.id ?? null);
+          const preferences = loadUiPreferences();
+          const restoredId = preferences.rememberActiveProject ? loadActiveProjectId() : null;
+          setActiveProjectId(stored.find((project) => project.id === restoredId)?.id ?? stored[0]?.id ?? null);
         } else {
           // seed initial demo project into storage
           for (const p of initialProjects) {
@@ -83,7 +98,11 @@ export function ProjectsPage() {
 
   function deleteLocalProject(id: string) {
     setProjects((current) => current.filter((p) => p.id !== id));
-    setActiveProjectId((current) => (current === id ? null : current));
+    setActiveProjectId((current) => {
+      const next = current === id ? null : current;
+      saveActiveProjectId(next);
+      return next;
+    });
     setOpenedProject((current) => (current?.id === id ? null : current));
     void deleteProject(id).catch(() => undefined);
   }
@@ -155,13 +174,16 @@ export function ProjectsPage() {
         </label>
       </div>
 
-      <PrototypeNotice />
+      {showPrototypeNotice ? <PrototypeNotice /> : null}
       <MetricsSummary circuitCount={circuitCount} projectCount={projects.length} />
       <RecentProjects
         onCreate={() => setIsCreateOpen(true)}
         onOpen={(project) => {
           setOpenedProject(project);
           setActiveProjectId(project.id);
+          if (loadUiPreferences().rememberActiveProject) {
+            saveActiveProjectId(project.id);
+          }
         }}
         projects={projects}
         onDelete={deleteLocalProject}

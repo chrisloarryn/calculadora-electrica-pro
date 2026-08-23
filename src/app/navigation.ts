@@ -31,7 +31,6 @@ export const sectionCopy: Record<
   },
   settings: {
     title: 'Ajustes',
-    description:
-      'La configuración de unidades, accesibilidad y perfiles estará disponible en esta sección.',
+    description: 'Preferencias locales y comportamiento visible del prototipo.',
   },
 };

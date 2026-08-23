@@ -666,6 +666,83 @@ input:focus-visible {
   line-height: 1.65;
 }
 
+.settings-page {
+  display: grid;
+  gap: 18px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.settings-page__hero {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-page__icon {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  place-items: center;
+  color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.settings-page h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(2rem, 6vw, 3rem);
+  letter-spacing: -0.035em;
+}
+
+.settings-page p {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+.settings-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.settings-card input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--blue);
+}
+
+.settings-card strong {
+  display: block;
+  color: var(--ink);
+  font-size: 0.96rem;
+}
+
+.settings-card small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
 .dialog-backdrop {
   position: fixed;
   z-index: 60;
