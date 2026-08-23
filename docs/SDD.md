@@ -1186,7 +1186,7 @@ La fuente operativa es [Ruta de implementación](PLAN_IMPLEMENTACION.md), versi�
 | R0 | ✅ Completado | Baseline y casos iniciales | Alcance, contratos y cinco casos definidos |
 | R1 | ✅ Completado | Scaffold + CI | `ci-gate` verde sobre aplicación mínima |
 | R2 | ✅ Completado | PWA shell + staging | HTTPS, instalación, health y smoke verdes |
-| R3 | ✅ Completado | Dominio + perfil Chile | Esquemas y tablas versionados con fuente |
+| R3 | ✅ En progreso | Dominio + perfil Chile | Scaffold inicial: value objects y perfil CL-SEC-RIC añadidos. Commit: `1c13be6`. Tests añadidos; CI validará formatos/types. |
 | R4 | ✅ Completado | Motor validado | Casos dorados e invariantes aprobados |
 | R5 | ✅ Completado | Frontend + persistencia | Caso de cuatro circuitos guardado y reabierto |
 | R6 | ✅ Completado | Offline + informes | Flujo P0, PDF, SVG y JSON sin red |
