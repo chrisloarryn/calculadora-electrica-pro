@@ -827,7 +827,7 @@ Contrato inicial de infraestructura:
 | Servicio Cloud Run producción | `calculadora-electrica-pro` |
 | Repositorio Artifact Registry | `calculadora-electrica` |
 | Imagen web | `southamerica-west1-docker.pkg.dev/gcp-course-2024/calculadora-electrica/web` |
-| Acceso | Público, `--allow-unauthenticated` |
+| Acceso | Público, con invoker IAM check deshabilitado en el servicio |
 | Puerto | Variable `PORT` inyectada por Cloud Run; valor habitual `8080` |
 | Memoria inicial | `512Mi` |
 | CPU inicial | `1` |

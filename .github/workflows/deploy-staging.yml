@@ -164,7 +164,7 @@ jobs:
           region: ${{ env.GCP_REGION }}
           image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPOSITORY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
           flags: >-
-            --allow-unauthenticated
+            --no-invoker-iam-check
             --port=8080
             --cpu=${{ vars.CLOUD_RUN_CPU }}
             --memory=${{ vars.CLOUD_RUN_MEMORY }}
@@ -182,11 +182,12 @@ jobs:
           test -n "$SERVICE_URL"
 
           for attempt in {1..30}; do
-            if test "$(curl --silent --output /dev/null --write-out '%{http_code}' "$SERVICE_URL/healthz")" = "200"; then
+            status_code="$(curl --silent --output /dev/null --write-out '%{http_code}' "$SERVICE_URL/healthz")"
+            if test "$status_code" = "200"; then
               break
             fi
             if test "$attempt" = "30"; then
-              echo "Cloud Run health check did not become ready" >&2
+              echo "Cloud Run health check did not become ready; last HTTP status: $status_code" >&2
               exit 1
             fi
             sleep 2
