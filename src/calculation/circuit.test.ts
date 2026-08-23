@@ -60,9 +60,7 @@ describe('calculatePreliminaryCircuit', () => {
 
     expect(manual.evaluatedConductorMm2).toBe(6);
     expect(manual.suggestedConductorMm2).toBe(automatic.suggestedConductorMm2);
-    expect(manual.estimatedVoltageDropPercent).toBeLessThan(
-      automatic.estimatedVoltageDropPercent,
-    );
+    expect(manual.estimatedVoltageDropPercent).toBeLessThan(automatic.estimatedVoltageDropPercent);
     expect(manual.isVoltageDropCompliant).toBe(true);
     expect(manual.maximumVoltageDropPercent).toBe(3);
   });
