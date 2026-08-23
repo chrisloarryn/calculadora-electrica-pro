@@ -8,13 +8,24 @@
 | Implementación | Parcial — ver la sección 'Estado de implementación' abajo | 
 
 ## Estado de implementación
-- Contenedor: `/health` endpoint, `nginx.conf` y `Dockerfile` HEALTHCHECK implementados. (Completado 2026-08-23)
-- CI/CD: Workflows actualizados para usar `/health`; verificaciones de smoke test, manifest y service worker presentes. (Completado)
-- PWA: `manifest.webmanifest`, `sw.js`/`service-worker.js` y `registerSW.js` incluidos en `dist/`. (Completado)
-- Cloud Run staging: Despliegue exitoso (workflow run 32624000099). Servicio público accesible. (Completado)
-- Cuenta de servicio runtime: creada y permisos aplicados según despliegue. (Completado)
-- Artifact Registry: repositorio `calculadora-electrica` referenciado por el pipeline; creación/verificación final pendiente si no existe en el proyecto GCP. (Pendiente)
-- Producción: despliegue y gating definidos en SDD; por ahora solo staging habilitado. (Pendiente)
+A continuación se listan los pasos del SDD y su estado. Cada paso realizado se marca con fecha y evidencia (commit / run) cuando aplica.
+
+| Paso SDD | Estado | Evidencia / notas |
+|---|---:|---|
+| Contenedor: exponer `/health`, CSP y headers de caché, usuario no-root | Completado | nginx.conf + Dockerfile; commit 846bcd0 (nginx template & CMD) y d7aad04 (estado SDD). (/health definido en nginx.conf, HEALTHCHECK en Dockerfile)
+| Dockerfile: HEALTHCHECK y env PORT | Completado | Dockerfile updated; commit 846bcd0
+| Nginx: escuchar en $PORT y servir SPA con fallback | Completado | nginx.conf template + envsubst CMD; commit 846bcd0
+| CI: smoke tests para `/`, `/health`, manifest, sw y headers | Completado | workflows reference `/health`; earlier run 32623404018 re-run and new CI run 32624162197 triggered. See .github/workflows/*
+| Artifact Registry integration in pipeline | Pendiente | Pipeline references `calculadora-electrica`; verify creation in GCP project `gcp-course-2024` (requires cloud access)
+| Cloud Run staging: deploy y hacer público | Completado | Deploy staging run 32624000099 succeeded; service URL: https://calculadora-electrica-staging-ey2qb5zbbq-tl.a.run.app
+| Cuenta de servicio runtime y permisos | Completado | Service account used by workflow and deployment; permissions applied (per deploy logs)
+| PWA assets, manifest, service worker | Completado | dist/ contains manifest.webmanifest, sw.js, registerSW.js; CI checks them
+| Producción: gating y deploy | Pendiente | Defined in SDD; requires Artifact Registry & manual gating
+
+Notas:
+- Los pasos completados se pushearon a la rama main y se activó CI (run 32624162197). No se asume creación de recursos GCP que no se verificaron desde CI (Artifact Registry, repos). Para marcar Artifact Registry y Producción como completados se necesita verificar o crear esos recursos en el proyecto GCP `gcp-course-2024`.
+
+
 
 
 | Producto | Calculadora Eléctrica Pro |
