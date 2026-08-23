@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { calculatePreliminaryCircuit } from '../calculation/circuit';
+import { chileLoadCatalog } from '../domain/loadCatalog';
 import { Button } from '../components/atoms/Button';
 import { Eyebrow } from '../components/atoms/Eyebrow';
 import { Icon } from '../components/atoms/Icon';
@@ -89,6 +90,11 @@ export function CircuitsPage() {
   function addLoad() {
     if (!activeCircuit) return;
     updateCircuit({ loads: [...activeCircuit.loads, createCircuitLoad()] });
+  }
+
+  function applyCatalogItem(loadId: string, catalogName: string) {
+    const item = chileLoadCatalog.find((candidate) => candidate.name === catalogName);
+    if (item) updateLoad(loadId, item);
   }
 
   function removeLoad(loadId: string) {
@@ -209,6 +215,37 @@ export function CircuitsPage() {
                     </select>
                   </label>
                   <label>
+                    Método de instalación
+                    <select
+                      value={activeCircuit.installationMethod}
+                      onChange={(event) =>
+                        updateCircuit({
+                          installationMethod: event.target
+                            .value as CircuitSummary['installationMethod'],
+                        })
+                      }
+                    >
+                      <option value="B1">B1</option>
+                      <option value="B2">B2</option>
+                      <option value="C">C</option>
+                      <option value="E">E</option>
+                    </select>
+                  </label>
+                  <label>
+                    Aislación
+                    <select
+                      value={activeCircuit.insulationType}
+                      onChange={(event) =>
+                        updateCircuit({
+                          insulationType: event.target.value as CircuitSummary['insulationType'],
+                        })
+                      }
+                    >
+                      <option value="PVC">PVC</option>
+                      <option value="XLPE">XLPE</option>
+                    </select>
+                  </label>
+                  <label>
                     Temperatura (°C)
                     <input
                       min={-10}
@@ -275,8 +312,9 @@ export function CircuitsPage() {
                   />
                 </label>
                 <label>
-                  Demanda
+                  Factor de demanda
                   <input
+                    disabled={activeCircuit.demandRule === 'profile-rule'}
                     max={1}
                     min={0.1}
                     step="0.05"
@@ -286,6 +324,20 @@ export function CircuitsPage() {
                       updateCircuit({ demandFactor: Number(event.target.value) })
                     }
                   />
+                </label>
+                <label>
+                  Regla de demanda
+                  <select
+                    value={activeCircuit.demandRule}
+                    onChange={(event) =>
+                      updateCircuit({
+                        demandRule: event.target.value as CircuitSummary['demandRule'],
+                      })
+                    }
+                  >
+                    <option value="manual">Manual</option>
+                    <option value="profile-rule">Perfil Chile (provisional)</option>
+                  </select>
                 </label>
                 <label>
                   Distancia (m)
@@ -314,17 +366,25 @@ export function CircuitsPage() {
                 </label>
               </div>
               <fieldset className="safety-selector">
-                <legend>Factor de seguridad</legend>
-                {([1, 1.25, 1.6] as const).map((factor) => (
+                <legend>Régimen de carga</legend>
+                {(['standard', 'continuous', 'high-starting-current'] as const).map((duty) => (
                   <button
-                    className={activeCircuit.safetyFactor === factor ? 'is-active' : ''}
-                    key={factor}
-                    onClick={() => updateCircuit({ safetyFactor: factor })}
+                    className={activeCircuit.loadDuty === duty ? 'is-active' : ''}
+                    key={duty}
+                    onClick={() => updateCircuit({ loadDuty: duty })}
                     type="button"
                   >
-                    {factor.toFixed(2)}
+                    {duty === 'standard'
+                      ? 'Estándar'
+                      : duty === 'continuous'
+                        ? 'Continua'
+                        : 'Alto arranque'}
                     <small>
-                      {factor === 1 ? 'Estándar' : factor === 1.25 ? 'Continua' : 'Alto pico'}
+                      {duty === 'continuous'
+                        ? 'Regla del perfil x1.25'
+                        : duty === 'high-starting-current'
+                          ? 'Prioriza curva de arranque'
+                          : 'Sin ajuste de corriente'}
                     </small>
                   </button>
                 ))}
@@ -348,6 +408,18 @@ export function CircuitsPage() {
                         onChange={(event) => updateLoad(load.id, { name: event.target.value })}
                         placeholder="Artefacto"
                       />
+                      <select
+                        aria-label="Catálogo de cargas"
+                        defaultValue=""
+                        onChange={(event) => applyCatalogItem(load.id, event.target.value)}
+                      >
+                        <option value="">Catálogo</option>
+                        {chileLoadCatalog.map((item) => (
+                          <option key={item.name} value={item.name}>
+                            {item.name}
+                          </option>
+                        ))}
+                      </select>
                       <select
                         aria-label="Tipo de carga"
                         value={load.type}
@@ -471,6 +543,14 @@ export function CircuitsPage() {
                         {activeCircuit.breakerCurve === 'auto'
                           ? result.suggestedCurve
                           : activeCircuit.breakerCurve}
+                      </strong>
+                    </span>
+                    <span>
+                      Diferencial sugerido
+                      <strong>
+                        {result.suggestedRcd
+                          ? `${String(result.suggestedRcd.sensitivityMa)} mA · ${result.suggestedRcd.class} · ${String(result.suggestedRcd.nominalCurrentA)} A`
+                          : 'Requiere evaluar uso'}
                       </strong>
                     </span>
                   </div>

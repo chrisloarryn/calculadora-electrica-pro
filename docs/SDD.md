@@ -1179,6 +1179,21 @@ Los cálculos y valores eléctricos nunca se incluirán automáticamente en tele
 
 ## 24. Plan de implementación derivado
 
+### 24.1 Pendientes posteriores al editor preliminar
+
+El editor actual opera localmente con un perfil `CL-SEC-RIC` de desarrollo. Sus resultados se etiquetan como preliminares y no pueden utilizarse para certificar instalaciones.
+
+| Pendiente | Estado | Condición de cierre |
+|---|---|---|
+| Verificar tablas RIC | Pendiente | Un instalador autorizado revisa cada tabla, factor y referencia de sección usada por el motor. |
+| Diferencial normativo | Parcial | Reglas por uso, ubicación, clase y continuidad de servicio revisadas para Chile. |
+| Método de instalación y aislación | Parcial | Tablas de capacidad y factores por método/aislación se cargan desde el perfil con fuente exacta. |
+| Catálogo de cargas | Parcial | Catálogo versionado, editable y con valores revisados; no sustituye datos de placa. |
+| Persistencia unificada | Pendiente | Circuitos y snapshots migrados desde `localStorage` a IndexedDB, con migraciones y exportación JSON completa. |
+| Informe profesional | Pendiente | PDF y unifilar SVG consumen snapshots inmutables y tienen pruebas de consistencia. |
+| Casos dorados y E2E | Pendiente | Casos monofásicos/trifásicos revisados y E2E cubren CRUD, persistencia, actualización y exportación. |
+| Actualización PWA | Pendiente | La aplicación informa la nueva versión y permite actualizar sin perder ediciones locales. |
+
 La fuente operativa es [Ruta de implementación](PLAN_IMPLEMENTACION.md), versión 1.0.0. Este SDD define qué construir; la ruta define orden, dependencias, PRs y gates.
 
 | Ruta | Estado | Resultado | Gate resumido |

@@ -1,4 +1,5 @@
 import type { CircuitSummary } from '../lib/circuits';
+import { clSecRicProfile } from '../standards/clSecRic';
 
 export interface PreliminaryCircuitResult {
   status: 'blocked' | 'warning';
@@ -11,10 +12,8 @@ export interface PreliminaryCircuitResult {
   warnings: string[];
   appliedRules: string[];
   suggestedCurve: 'B' | 'C' | 'D';
+  suggestedRcd: { sensitivityMa: number; nominalCurrentA: number; class: string } | null;
 }
-
-const BREAKERS_A = [6, 10, 16, 20, 25, 32, 40, 50, 63];
-const CONDUCTORS_MM2 = [1.5, 2.5, 4, 6, 10, 16];
 
 function selectAtLeast(values: number[], target: number): number | null {
   return values.find((value) => value >= target) ?? null;
@@ -41,6 +40,7 @@ export function calculatePreliminaryCircuit(circuit: CircuitSummary): Preliminar
       warnings: [...warnings, 'Ingresa tensión y al menos una carga con potencia para calcular.'],
       appliedRules: [],
       suggestedCurve: 'C',
+      suggestedRcd: null,
     };
   }
 
@@ -48,7 +48,8 @@ export function calculatePreliminaryCircuit(circuit: CircuitSummary): Preliminar
     loads.reduce((total, load) => total + load.powerFactor, 0) / loads.length;
   const averageEfficiency =
     loads.reduce((total, load) => total + load.efficiency, 0) / loads.length;
-  const demandedPowerW = installedPowerW * circuit.demandFactor;
+  const demandFactor = circuit.demandRule === 'profile-rule' ? 1 : circuit.demandFactor;
+  const demandedPowerW = installedPowerW * demandFactor;
   const denominator =
     circuit.system === 'three-phase'
       ? Math.sqrt(3) * circuit.voltageV * averagePowerFactor * averageEfficiency
@@ -56,10 +57,15 @@ export function calculatePreliminaryCircuit(circuit: CircuitSummary): Preliminar
   const temperatureFactor =
     circuit.ambientTemperatureC > 40 ? 0.82 : circuit.ambientTemperatureC > 30 ? 0.91 : 1;
   const groupingFactor = circuit.groupedCircuits > 3 ? 0.7 : circuit.groupedCircuits > 1 ? 0.8 : 1;
-  const designCurrentA = (demandedPowerW / denominator) * circuit.safetyFactor;
-  const suggestedBreakerA = selectAtLeast(BREAKERS_A, designCurrentA);
+  const dutyRule = clSecRicProfile.loadDutyRules?.[circuit.loadDuty] ?? {
+    currentMultiplier: 1,
+    suggestedCurve: 'B' as const,
+  };
+  const designCurrentA = (demandedPowerW / denominator) * dutyRule.currentMultiplier;
+  const suggestedBreakerA = selectAtLeast(clSecRicProfile.breakerCalibres ?? [], designCurrentA);
   const adjustedCurrentA = designCurrentA / (temperatureFactor * groupingFactor);
-  const suggestedConductorMm2 = selectAtLeast(CONDUCTORS_MM2, adjustedCurrentA / 7);
+  const suggestedConductorMm2 =
+    clSecRicProfile.calibres?.find((calibre) => calibre.i_max >= adjustedCurrentA)?.mm2 ?? null;
   const estimatedVoltageDropPercent = suggestedConductorMm2
     ? (2 * circuit.lengthM * designCurrentA * 0.0175 * 100) /
       (suggestedConductorMm2 * circuit.voltageV)
@@ -69,7 +75,12 @@ export function calculatePreliminaryCircuit(circuit: CircuitSummary): Preliminar
     ? 'D'
     : loads.some((load) => load.type === 'electronic')
       ? 'C'
-      : 'B';
+      : dutyRule.suggestedCurve;
+  const requiresRcd = loads.some((load) => ['outlet', 'electronic'].includes(load.type));
+  const suggestedRcd =
+    requiresRcd && suggestedBreakerA
+      ? clSecRicProfile.differentials?.find((rcd) => rcd.i_n >= suggestedBreakerA)
+      : undefined;
   if (
     estimatedVoltageDropPercent !== null &&
     estimatedVoltageDropPercent > circuit.maximumVoltageDropPercent
@@ -92,10 +103,18 @@ export function calculatePreliminaryCircuit(circuit: CircuitSummary): Preliminar
     estimatedVoltageDropPercent,
     warnings,
     appliedRules: [
-      `Demanda ${circuit.demandFactor.toFixed(2)} y seguridad x${circuit.safetyFactor.toFixed(2)}.`,
-      `Correcciones preliminares: temperatura ${String(circuit.ambientTemperatureC)} °C y ${String(circuit.groupedCircuits)} circuitos agrupados.`,
-      'Perfil CL-SEC-RIC de desarrollo: no autoritativo.',
+      `Demanda ${demandFactor.toFixed(2)} mediante regla ${circuit.demandRule}.`,
+      `Régimen ${circuit.loadDuty}: multiplicador de corriente x${dutyRule.currentMultiplier.toFixed(2)}.`,
+      `Instalación ${circuit.installationMethod}, aislación ${circuit.insulationType}, temperatura ${String(circuit.ambientTemperatureC)} °C y ${String(circuit.groupedCircuits)} circuitos agrupados.`,
+      `Perfil ${clSecRicProfile.id} ${clSecRicProfile.version}: ${clSecRicProfile.verificationStatus ?? 'development'}.`,
     ],
     suggestedCurve,
+    suggestedRcd: suggestedRcd
+      ? {
+          sensitivityMa: suggestedRcd.sensibilidad_mA,
+          nominalCurrentA: suggestedRcd.i_n,
+          class: suggestedRcd.class,
+        }
+      : null,
   };
 }

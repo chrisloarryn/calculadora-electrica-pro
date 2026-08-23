@@ -2,9 +2,35 @@
   "id": "CL-SEC-RIC",
   "version": "2026-08-23",
   "country": "Chile",
-  "source": "Adapted sample for R3",
+  "source": "SEC: RIC N°03, N°04 y N°05; perfil de desarrollo pendiente de revisión profesional",
   "author": "Equipo",
-  "notes": "Minimal sample profile for development and tests. Not authoritative.",
+  "notes": "Los valores permiten probar contratos de software. No son una transcripción autoritativa de las tablas RIC ni habilitan certificación.",
+  "verificationStatus": "development",
+  "sources": [
+    {
+      "document": "RIC N°03",
+      "topic": "Demanda y alimentadores",
+      "url": "https://www.sec.cl/sitio-web/wp-content/uploads/2021/03/RIC-N03-Alimentadores-y-demanda-de-una-instalacion-V1.1-1.pdf"
+    },
+    {
+      "document": "RIC N°04",
+      "topic": "Conductores y canalizaciones",
+      "url": "https://www.sec.cl/sitio-web/wp-content/uploads/2021/01/RIC-N04-Conductores-y-Canalizaciones.pdf"
+    },
+    {
+      "document": "RIC N°05",
+      "topic": "Protecciones y diferenciales",
+      "url": "https://www.sec.cl/sitio-web/wp-content/uploads/2021/01/RIC-N05-Medidas-de-Proteccion-Contra-Tensiones-Peligrosas.pdf"
+    }
+  ],
+  "breakerCalibres": [6, 10, 16, 20, 25, 32, 40, 50, 63],
+  "loadDutyRules": {
+    "standard": { "currentMultiplier": 1, "suggestedCurve": "B" },
+    "continuous": { "currentMultiplier": 1.25, "suggestedCurve": "B" },
+    "high-starting-current": { "currentMultiplier": 1, "suggestedCurve": "D" }
+  },
+  "installationMethods": ["B1", "B2", "C", "E"],
+  "insulationTypes": ["PVC", "XLPE"],
   "calibres": [
     { "mm2": 1.5, "i_max": 10 },
     { "mm2": 2.5, "i_max": 20 },
@@ -12,7 +38,8 @@
     { "mm2": 6, "i_max": 32 }
   ],
   "differentials": [
-    { "sensibilidad_mA": 30, "i_n": 25 },
-    { "sensibilidad_mA": 300, "i_n": 63 }
+    { "sensibilidad_mA": 30, "i_n": 25, "class": "A" },
+    { "sensibilidad_mA": 30, "i_n": 40, "class": "A" },
+    { "sensibilidad_mA": 300, "i_n": 63, "class": "A" }
   ]
 }

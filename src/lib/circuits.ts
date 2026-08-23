@@ -1,4 +1,5 @@
 export type LoadType = 'lighting' | 'outlet' | 'resistive' | 'motor' | 'electronic' | 'custom';
+export type LoadDuty = 'standard' | 'continuous' | 'high-starting-current';
 
 export interface CircuitLoad {
   id: string;
@@ -16,11 +17,14 @@ export interface CircuitSummary {
   system: 'single-phase' | 'three-phase';
   voltageV: number;
   demandFactor: number;
-  safetyFactor: 1 | 1.25 | 1.6;
+  demandRule: 'manual' | 'profile-rule';
+  loadDuty: LoadDuty;
   lengthM: number;
   breakerCurve: 'auto' | 'B' | 'C' | 'D';
   advanced: boolean;
   conductorMaterial: 'copper' | 'aluminium';
+  installationMethod: 'B1' | 'B2' | 'C' | 'E';
+  insulationType: 'PVC' | 'XLPE';
   ambientTemperatureC: number;
   groupedCircuits: number;
   maximumVoltageDropPercent: number;
@@ -65,7 +69,10 @@ function isCircuitSummary(value: unknown): value is CircuitSummary {
     (value.system === 'single-phase' || value.system === 'three-phase') &&
     typeof value.voltageV === 'number' &&
     typeof value.demandFactor === 'number' &&
-    (value.safetyFactor === 1 || value.safetyFactor === 1.25 || value.safetyFactor === 1.6) &&
+    (value.demandRule === 'manual' || value.demandRule === 'profile-rule') &&
+    (value.loadDuty === 'standard' ||
+      value.loadDuty === 'continuous' ||
+      value.loadDuty === 'high-starting-current') &&
     typeof value.lengthM === 'number' &&
     (value.breakerCurve === 'auto' ||
       value.breakerCurve === 'B' ||
@@ -73,6 +80,11 @@ function isCircuitSummary(value: unknown): value is CircuitSummary {
       value.breakerCurve === 'D') &&
     typeof value.advanced === 'boolean' &&
     (value.conductorMaterial === 'copper' || value.conductorMaterial === 'aluminium') &&
+    (value.installationMethod === 'B1' ||
+      value.installationMethod === 'B2' ||
+      value.installationMethod === 'C' ||
+      value.installationMethod === 'E') &&
+    (value.insulationType === 'PVC' || value.insulationType === 'XLPE') &&
     typeof value.ambientTemperatureC === 'number' &&
     typeof value.groupedCircuits === 'number' &&
     typeof value.maximumVoltageDropPercent === 'number' &&
@@ -127,8 +139,15 @@ function migrateCircuit(value: unknown): CircuitSummary | null {
     system: value.system === 'three-phase' ? 'three-phase' : 'single-phase',
     voltageV: typeof value.voltageV === 'number' ? value.voltageV : 220,
     demandFactor: typeof value.demandFactor === 'number' ? value.demandFactor : 1,
-    safetyFactor:
-      value.safetyFactor === 1.25 || value.safetyFactor === 1.6 ? value.safetyFactor : 1,
+    demandRule: value.demandRule === 'profile-rule' ? 'profile-rule' : 'manual',
+    loadDuty:
+      value.safetyFactor === 1.25
+        ? 'continuous'
+        : value.safetyFactor === 1.6
+          ? 'high-starting-current'
+          : value.loadDuty === 'continuous' || value.loadDuty === 'high-starting-current'
+            ? value.loadDuty
+            : 'standard',
     lengthM: typeof value.lengthM === 'number' ? value.lengthM : 12,
     breakerCurve:
       value.breakerCurve === 'B' || value.breakerCurve === 'C' || value.breakerCurve === 'D'
@@ -136,6 +155,13 @@ function migrateCircuit(value: unknown): CircuitSummary | null {
         : 'auto',
     advanced: typeof value.advanced === 'boolean' ? value.advanced : false,
     conductorMaterial: value.conductorMaterial === 'aluminium' ? 'aluminium' : 'copper',
+    installationMethod:
+      value.installationMethod === 'B1' ||
+      value.installationMethod === 'B2' ||
+      value.installationMethod === 'E'
+        ? value.installationMethod
+        : 'C',
+    insulationType: value.insulationType === 'XLPE' ? 'XLPE' : 'PVC',
     ambientTemperatureC:
       typeof value.ambientTemperatureC === 'number' ? value.ambientTemperatureC : 30,
     groupedCircuits: typeof value.groupedCircuits === 'number' ? value.groupedCircuits : 1,
@@ -153,11 +179,14 @@ export function createCircuit(): CircuitSummary {
     system: 'single-phase',
     voltageV: 220,
     demandFactor: 1,
-    safetyFactor: 1,
+    demandRule: 'manual',
+    loadDuty: 'standard',
     lengthM: 12,
     breakerCurve: 'auto',
     advanced: false,
     conductorMaterial: 'copper',
+    installationMethod: 'C',
+    insulationType: 'PVC',
     ambientTemperatureC: 30,
     groupedCircuits: 1,
     maximumVoltageDropPercent: 3,

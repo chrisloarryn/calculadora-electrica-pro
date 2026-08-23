@@ -6,6 +6,12 @@ export interface ProfileCalibre {
 export interface ProfileDifferential {
   sensibilidad_mA: number;
   i_n: number;
+  class: 'AC' | 'A' | 'F' | 'B';
+}
+
+export interface ProfileLoadDutyRule {
+  currentMultiplier: number;
+  suggestedCurve: 'B' | 'C' | 'D';
 }
 
 export interface Profile {
@@ -17,6 +23,11 @@ export interface Profile {
   notes?: string;
   calibres?: ProfileCalibre[];
   differentials?: ProfileDifferential[];
+  breakerCalibres?: number[];
+  loadDutyRules?: Record<string, ProfileLoadDutyRule>;
+  installationMethods?: string[];
+  insulationTypes?: string[];
+  verificationStatus?: 'development' | 'reviewed';
 }
 
 export function parseProfile(raw: string): Profile {
