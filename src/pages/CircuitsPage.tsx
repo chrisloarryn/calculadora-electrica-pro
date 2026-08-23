@@ -161,12 +161,12 @@ export function CircuitsPage() {
 
       <div className="circuits-toolbar">
         <TextField
-          fullWidth
           label="Proyecto activo"
           select
           size="small"
           value={activeProjectId ?? ''}
           onChange={(event) => selectProject(event.target.value)}
+          sx={{ flex: 1, minWidth: { xs: '100%', sm: 320 } }}
         >
           <MenuItem value="">Selecciona un proyecto</MenuItem>
           {projects.map((project) => (

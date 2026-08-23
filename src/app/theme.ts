@@ -44,6 +44,19 @@ export const theme = createTheme({
       defaultProps: {
         disableElevation: true,
       },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderRadius: theme.shape.borderRadius,
+          minHeight: 48,
+          textTransform: 'none',
+        }),
+        containedPrimary: {
+          '&:hover': {
+            backgroundColor: '#0f52b8',
+          },
+          backgroundColor: '#1769e0',
+        },
+      },
     },
     MuiAppBar: {
       defaultProps: {
